@@ -5,8 +5,8 @@ This is the EFi V2 Swap Contract.
 void swapcontrak::setbonus(uint8_t bonus)
 {
     require_auth(get_self());
-    totaltable totalswapped(get_self(), "totals"_n.value); 
 
+    totaltable totalswapped(get_self(), "totals"_n.value); 
     auto total_it = totalswapped.find("totals"_n.value);
     if(total_it != totalswapped.end()) 
     {
@@ -21,13 +21,13 @@ void swapcontrak::setbonus(uint8_t bonus)
 /* Setter function that needs to be called after the contract is deployed to initialize the totals table (with 0, preferably, except the bonus, maybe.) */
 void swapcontrak::set(const asset& initial_hub, const asset& initial_dop, const asset& initial_dmd, uint8_t initial_bonus, bool initial_locked)
 {
-    require_auth( get_self() );
+    require_auth(get_self());
     totaltable totalswapped(get_self(), "totals"_n.value); 
 
     auto total_it = totalswapped.find("totals"_n.value);
     if( total_it == totalswapped.end() ) 
     {
-        totalswapped.emplace( get_self(), [&]( auto& row ) 
+        totalswapped.emplace( get_self(), [&](auto& row) 
         {
             row.key = "totals"_n;
             row.hub_total_swapped = initial_hub;
