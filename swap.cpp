@@ -4,13 +4,13 @@ This is the EFi V2 Swap Contract.
 */
 void swapcontrak::setbonus(uint8_t bonus)
 {
-    require_auth( get_self() );
+    require_auth(get_self());
     totaltable totalswapped(get_self(), "totals"_n.value); 
 
-    auto it = totalswapped.find("totals"_n.value);
-    if( it != totalswapped.end() ) 
+    auto total_it = totalswapped.find("totals"_n.value);
+    if(total_it != totalswapped.end()) 
     {
-        totalswapped.modify(it, get_self(), [&]( auto& row ) 
+        totalswapped.modify(total_it, get_self(), [&]( auto& row) 
         {
             row.bonus = bonus;
         });
@@ -24,8 +24,8 @@ void swapcontrak::set(const asset& initial_hub, const asset& initial_dop, const 
     require_auth( get_self() );
     totaltable totalswapped(get_self(), "totals"_n.value); 
 
-    auto it = totalswapped.find("totals"_n.value);
-    if( it == totalswapped.end() ) 
+    auto total_it = totalswapped.find("totals"_n.value);
+    if( total_it == totalswapped.end() ) 
     {
         totalswapped.emplace( get_self(), [&]( auto& row ) 
         {
@@ -40,6 +40,23 @@ void swapcontrak::set(const asset& initial_hub, const asset& initial_dop, const 
     else 
         return;
 }
+
+void stake::setlocked(bool locked)
+{ /* This function lets us set the 'locked' variable true or false for the 31 day staking. */
+    require_auth( get_self() );
+    totaltable totalswapped(get_self(), "totals"_n.value); 
+
+    auto total_it = totalswapped.find("totals"_n.value);
+    if(total_it != totalswapped.end()) 
+    {
+        totalswapped.modify(total_it, get_self(), [&]( auto& row ) 
+        {
+            row.locked = locked;
+        });
+    } 
+    else 
+        return;
+}
 /* Three very similar eosio::on_notify functions that update the tables whenever users send DMD/DOP/HUB to the contract and then gives back the rewards + bonus.
    The EFi team freeze check is here. If they send tokens, we freeze the whole swap, but keep receiving user tokens. With an added twist. */
 [[eosio::on_notify("eoshubtokens::transfer")]]
@@ -47,7 +64,7 @@ void swapcontrak::registerswaphub(const name& owner_account, const name& to, con
 {
     if (to != get_self() || owner_account == get_self())
     {
-        print("error: these are not the droids you are looking for.");
+        print("*these are not the droids you are looking for*");
         return;
     }
 
@@ -60,18 +77,17 @@ void swapcontrak::registerswaphub(const name& owner_account, const name& to, con
     check(total_it->locked == false,"error: the EFi V2 swap is currently locked (inactive).");
 
     uint8_t bonus = total_it->bonus;
-    totalswapped.modify(total_it, get_self(), [&]( auto& row ) 
+    totalswapped.modify(total_it, get_self(), [&](auto& row) 
     {
-        row.key = "totals"_n;
         row.hub_total_swapped += swap_quantity_hub; 
     });
 
-    swaptable swapped( get_self(), get_self().value );
+    swaptable swapped(get_self(), get_self().value);
 
-    auto swapped_it = swapped.find( owner_account.value );
-    if( swapped_it == swapped.end() ) 
+    auto swapped_it = swapped.find(owner_account.value);
+    if(swapped_it == swapped.end()) 
     {
-        swapped.emplace( get_self(), [&]( auto& row )
+        swapped.emplace( get_self(), [&](auto& row)
         {
             row.owner_account = owner_account;
             row.hub_swapped_amount = swap_quantity_hub; 
@@ -79,7 +95,7 @@ void swapcontrak::registerswaphub(const name& owner_account, const name& to, con
     } 
     else 
     {
-        swapped.modify(swapped_it, get_self(), [&]( auto& row ) 
+        swapped.modify(swapped_it, get_self(), [&](auto& row) 
         {   
             row.hub_swapped_amount += swap_quantity_hub;
         });
@@ -90,7 +106,7 @@ void swapcontrak::registerswaphub(const name& owner_account, const name& to, con
     {
         swapcontrak::inline_transferhub(get_self(), owner_account, swap_quantity_hub, "Sending rewards with zero bonus.");
         /* Modify received_amount in the swapped table */
-        swapped.modify(swapped_it, get_self(), [&]( auto& row ) 
+        swapped.modify(swapped_it, get_self(), [&](auto& row) 
         {   
             if (row.hub_received_amount.amount == 0)
                 row.hub_received_amount = swap_quantity_hub; // Let's see if we can delete this if else here and just add the +=
@@ -105,7 +121,7 @@ void swapcontrak::registerswaphub(const name& owner_account, const name& to, con
         asset new_swap_quantity = swap_quantity_hub + (swap_quantity_hub * bonus/100); // Give the appropiate bonus.
         swapcontrak::inline_transferhub(get_self(), owner_account, new_swap_quantity, "Sending rewards with bonus.");
         /* Modify received_amount in the swapped table */
-        swapped.modify(swapped_it, get_self(), [&]( auto& row ) 
+        swapped.modify(swapped_it, get_self(), [&]( auto& row) 
         {   
             if (row.hub_received_amount.amount == 0)
                 row.hub_received_amount = new_swap_quantity;
@@ -120,7 +136,7 @@ void swapcontrak::registerswapdop(const name& owner_account, const name& to, con
 {
     if (to != get_self() || owner_account == get_self())
     {
-        print("error: these are not the droids you are looking for.");
+        print("*these are not the droids you are looking for*");
         return;
     }
 
@@ -133,18 +149,17 @@ void swapcontrak::registerswapdop(const name& owner_account, const name& to, con
     check(total_it->locked == false,"error: the EFi V2 swap is currently locked (inactive).");
 
     uint8_t bonus = total_it->bonus;
-    totalswapped.modify(total_it, get_self(), [&]( auto& row ) 
+    totalswapped.modify(total_it, get_self(), [&](auto& row) 
     {
-        row.key = "totals"_n;
         row.dop_total_swapped += swap_quantity_dop; 
     });
 
-    swaptable swapped( get_self(), get_self().value );
+    swaptable swapped(get_self(), get_self().value);
 
-    auto swapped_it = swapped.find( owner_account.value );
-    if( swapped_it == swapped.end() ) 
+    auto swapped_it = swapped.find(owner_account.value);
+    if(swapped_it == swapped.end()) 
     {
-        swapped.emplace( get_self(), [&]( auto& row )
+        swapped.emplace( get_self(), [&](auto& row)
         {
             row.owner_account = owner_account;
             row.dop_swapped_amount = swap_quantity_dop; 
@@ -152,7 +167,7 @@ void swapcontrak::registerswapdop(const name& owner_account, const name& to, con
     } 
     else 
     {
-        swapped.modify(swapped_it, get_self(), [&]( auto& row ) 
+        swapped.modify(swapped_it, get_self(), [&](auto& row) 
         {   
             row.dop_swapped_amount += swap_quantity_dop;
         });
@@ -163,7 +178,7 @@ void swapcontrak::registerswapdop(const name& owner_account, const name& to, con
     {
         swapcontrak::inline_transferdop(get_self(), owner_account, swap_quantity_dop, "Sending rewards with zero bonus.");
         /* Modify received_amount in the swapped table */
-        swapped.modify(swapped_it, get_self(), [&]( auto& row ) 
+        swapped.modify(swapped_it, get_self(), [&](auto& row) 
         {   
             if (row.dop_received_amount.amount == 0)
                 row.dop_received_amount = swap_quantity_dop; // Let's see if we can delete this if else here and just add the +=
@@ -178,7 +193,7 @@ void swapcontrak::registerswapdop(const name& owner_account, const name& to, con
         asset new_swap_quantity = swap_quantity_dop + (swap_quantity_dop * bonus/100); // Give the appropiate bonus.
         swapcontrak::inline_transferdop(get_self(), owner_account, new_swap_quantity, "Sending rewards with bonus.");
         /* Modify received_amount in the swapped table */
-        swapped.modify(swapped_it, get_self(), [&]( auto& row ) 
+        swapped.modify(swapped_it, get_self(), [&]( auto& row) 
         {   
             if (row.dop_received_amount.amount == 0)
                 row.dop_received_amount = new_swap_quantity;
@@ -193,7 +208,7 @@ void swapcontrak::registerswapdmd(const name& owner_account, const name& to, con
 {
     if (to != get_self() || owner_account == get_self())
     {
-        print("error: these are not the droids you are looking for.");
+        print("*these are not the droids you are looking for*");
         return;
     }
 
@@ -206,18 +221,17 @@ void swapcontrak::registerswapdmd(const name& owner_account, const name& to, con
     check(total_it->locked == false,"error: the EFi V2 swap is currently locked (inactive).");
 
     uint8_t bonus = total_it->bonus;
-    totalswapped.modify(total_it, get_self(), [&]( auto& row ) 
+    totalswapped.modify(total_it, get_self(), [&](auto& row) 
     {
-        row.key = "totals"_n;
         row.dmd_total_swapped += swap_quantity_dmd; 
     });
 
-    swaptable swapped( get_self(), get_self().value );
+    swaptable swapped(get_self(), get_self().value);
 
-    auto swapped_it = swapped.find( owner_account.value );
-    if( swapped_it == swapped.end() ) 
+    auto swapped_it = swapped.find(owner_account.value);
+    if(swapped_it == swapped.end()) 
     {
-        swapped.emplace( get_self(), [&]( auto& row )
+        swapped.emplace( get_self(), [&](auto& row)
         {
             row.owner_account = owner_account;
             row.dmd_swapped_amount = swap_quantity_dmd; 
@@ -225,7 +239,7 @@ void swapcontrak::registerswapdmd(const name& owner_account, const name& to, con
     } 
     else 
     {
-        swapped.modify(swapped_it, get_self(), [&]( auto& row ) 
+        swapped.modify(swapped_it, get_self(), [&](auto& row) 
         {   
             row.dmd_swapped_amount += swap_quantity_dmd;
         });
@@ -236,7 +250,7 @@ void swapcontrak::registerswapdmd(const name& owner_account, const name& to, con
     {
         swapcontrak::inline_transferdmd(get_self(), owner_account, swap_quantity_dmd, "Sending rewards with zero bonus.");
         /* Modify received_amount in the swapped table */
-        swapped.modify(swapped_it, get_self(), [&]( auto& row ) 
+        swapped.modify(swapped_it, get_self(), [&](auto& row) 
         {   
             if (row.dmd_received_amount.amount == 0)
                 row.dmd_received_amount = swap_quantity_dmd; // Let's see if we can delete this if else here and just add the +=
@@ -251,7 +265,7 @@ void swapcontrak::registerswapdmd(const name& owner_account, const name& to, con
         asset new_swap_quantity = swap_quantity_dmd + (swap_quantity_dmd * bonus/100); // Give the appropiate bonus.
         swapcontrak::inline_transferdmd(get_self(), owner_account, new_swap_quantity, "Sending rewards with bonus.");
         /* Modify received_amount in the swapped table */
-        swapped.modify(swapped_it, get_self(), [&]( auto& row ) 
+        swapped.modify(swapped_it, get_self(), [&]( auto& row) 
         {   
             if (row.dmd_received_amount.amount == 0)
                 row.dmd_received_amount = new_swap_quantity;
