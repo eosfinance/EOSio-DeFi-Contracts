@@ -1,10 +1,3 @@
-/*
-Well, let's say we release 0.1 DOP every second. That means 360 DOP per hour, 8640 DOP per day or 3,153,600 DOP per year.
-So in this sense, if we have 3.1 mil DOP staking, the APR will be 100%, if we have 1.55 mil DOP staking, APR = 200%.
-750k DOP staking, APR = 400%, 
-375k DOP, APR = 800%
-37k DOP, APR = 8000% etc.
-*/
 #include <stake.hpp>
 /*
 This is the EFi V2 Steak Contract.
