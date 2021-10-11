@@ -39,9 +39,9 @@ void stake::set(const asset& total_staked_hub, const asset& total_staked_dop, co
             row.hub_total_staked      = total_staked_hub;
             row.dop_total_staked      = total_staked_dop;
             row.dmd_total_staked      = total_staked_dmd;
-            // We'll always set the locked to zero on set(). We have to do two things to initialize the staking.
+            /* We'll always set the locked to zero on set(). We have to do two things to initialize the staking */
             row.locked                = 0; 
-            // How many coins are issued per second (will be multiplied by 1000 to fit the precision)
+            /* How many coins are issued per second (will be multiplied by 1000 to fit the precision) */
             row.hub_issue_frequency   = hub_issue_frequency;
             row.dop_issue_frequency   = dop_issue_frequency;
             row.dmd_issue_frequency   = dmd_issue_frequency;
@@ -54,9 +54,9 @@ void stake::set(const asset& total_staked_hub, const asset& total_staked_dop, co
             row.hub_total_staked      = total_staked_hub;
             row.dop_total_staked      = total_staked_dop;
             row.dmd_total_staked      = total_staked_dmd;
-            // We'll always set the locked to zero on set(). We have to do two things to initialize the staking.
+            /* We'll always set the locked to zero on set(). We have to do two things to initialize the staking */
             row.locked                = 0; 
-            // How many coins are issued per second (will be multiplied by 1000 to fit the precision)
+            /* How many coins are issued per second (will be multiplied by 1000 to fit the precision) */
             row.hub_issue_frequency   = hub_issue_frequency;
             row.dop_issue_frequency   = dop_issue_frequency;
             row.dmd_issue_frequency   = dmd_issue_frequency;
@@ -65,14 +65,13 @@ void stake::set(const asset& total_staked_hub, const asset& total_staked_dop, co
 }
 // For added security, we can feed the staking contract with a bit of coins every day, so we don't have to give it the maximum number of coins.
 void stake::issue()
-{
-/* - Looks at the time passed since last issue() call.
-   - The issue() action will need to calculate what to add to the "unclaimed_rewards" field value. 
-   - The "unclaimed_rewards" are zeroed when the user calls claim() successfully and receives all unclaimed rewards.
-   - The issue() action will issue the same amount of tokens for every second that passed since the last_reward_time field value. 
-   - The new tokens are issued to that period's pool. Then, it will update the unclaimed_reward field for each user. 
-   - Looks at what percentage of the period's pool the user has and then, it adds the appropiate value in the unclaimed_reward(). */
-    require_auth( "worker.efi"_n ); // issue() is called by the efi worker.
+{/* -> Looks at the time passed since last issue() call.
+    -> The issue() action will need to calculate what to add to the "unclaimed_rewards" field value. 
+    -> The "unclaimed_rewards" are zeroed when the user calls claim() successfully and receives all unclaimed rewards.
+    -> The issue() action will issue the same amount of tokens for every second that passed since the last_reward_time field value. 
+    -> The new tokens are issued to that period's pool. Then, it will update the unclaimed_reward field for each user. 
+    -> Looks at what percentage of the period's pool the user has and then, it adds the appropiate value in the unclaimed_reward(). */
+    require_auth( "worker.efi"_n ); /* issue() is called by the efi worker */
 
     totaltable totalstaked(get_self(), "totals"_n.value); 
     auto total_it = totalstaked.find("totals"_n.value);
@@ -84,7 +83,8 @@ void stake::issue()
     uint32_t last_reward_time     = total_it->last_reward_time;
     uint16_t issue_precision      = 100; // This means that if "issue_frequency" == 100, we release 1 token per second.
                                         //   and if "issue_frequency" == 1: we release 0.01 tokens per second.
-    // Coins issued every second. Multiplied by 10000 for tokens with precision 4. Divided by "issue_precision" for extra control.
+
+    // Coins issued every second. Multiplied by 10000 for tokens with precision 4. Divided by "issue_precision" for extra control:
     uint32_t hub_issue_frequency  = total_it->hub_issue_frequency*10000/issue_precision;
     uint32_t dop_issue_frequency  = total_it->dop_issue_frequency*10000/issue_precision;
     uint32_t dmd_issue_frequency  = total_it->dmd_issue_frequency*10000/issue_precision;
@@ -96,6 +96,7 @@ void stake::issue()
     uint32_t now = current_time_point().sec_since_epoch();
     uint32_t seconds_passed = now - last_reward_time;
     eosio::print_f("Seconds passed since last issue(): [%] \n",seconds_passed);
+
     // Determine how much total reward should be issued in this period for each of the coins: hub, dmd, dop.
     uint32_t total_hub_released = seconds_passed * hub_issue_frequency;
     uint32_t total_dop_released = seconds_passed * dop_issue_frequency;
@@ -113,31 +114,31 @@ void stake::issue()
     {
         eosio::print_f("Checking staking information for: [%]\n",begin_itr->owner_account);
         staked.modify(begin_itr, get_self(), [&]( auto& row ) 
-        { // Modify the table entries to increase user's "unclaimed_amount"
+        { /* Modify the table entries to increase user's "unclaimed_amount" */
             if (row.hub_staked_amount.amount > 0){
                 float hub_percentage = float(row.hub_staked_amount.amount)/float(hub_total_staked) * 100;
-                // (divided by 10000) for coins with precision 4
+                /* (divided by 10000) for coins with precision 4 */
                 row.hub_unclaimed_amount.amount += (hub_percentage*total_hub_released)/0.01/10000;}
             if (row.dop_staked_amount.amount > 0){
                 uint32_t dop_percentage = row.dop_staked_amount.amount/dop_total_staked * 100;
-                // (divided by 10000) for coins with precision 4
+                /* (divided by 10000) for coins with precision 4 */
                 row.dop_unclaimed_amount.amount += (dop_percentage*total_dop_released)/0.01/10000;}
 
             if (row.dmd_staked_amount.amount > 0){
                 uint32_t dmd_percentage = row.dmd_staked_amount.amount/dmd_total_staked * 100;
-                // (divided by 10000) for coins with precision 4
+                /* (divided by 10000) for coins with precision 4 */
                 row.dmd_unclaimed_amount.amount += (dmd_percentage*total_dmd_released)/0.01/10000;}
         });
         ++ begin_itr;
         ++ current_iteration;
     }
-    // Log the last reward time.
+    /* Log the last reward time */
     totalstaked.modify(total_it, get_self(), [&](auto& row) 
     {
         row.last_reward_time = now;
     });
 }
-// This is the claim() action that the users call to claim their unclaimed HUB rewards.
+/* This is the claim() action that the users call to claim their unclaimed HUB rewards */
 void stake::claimhub(const name& owner_account)
 {
     require_auth(owner_account);
@@ -148,7 +149,7 @@ void stake::claimhub(const name& owner_account)
 
     asset hub_unclaimed = staked_it->hub_unclaimed_amount;
     check(hub_unclaimed.amount != 0,"error: no HUB available to claim.");
-    // Transfer the user his hub, and then set his "hub_unclaimed_amount" field to zero and also updates "hub_claimed_amount".
+    /* Transfer the user his hub, and then set his "hub_unclaimed_amount" field to zero and also updates "hub_claimed_amount" */
     stake::inline_transferhub(get_self(), owner_account, hub_unclaimed, "I'm claiming HUB!!!");
     staked.modify(staked_it, get_self(), [&](auto& row) 
     {   
@@ -156,7 +157,7 @@ void stake::claimhub(const name& owner_account)
         row.hub_claimed_amount.amount += hub_unclaimed.amount;
     });
 }
-// This is the claim() action that the users call to claim their unclaimed DOP rewards.
+/* This is the claim() action that the users call to claim their unclaimed DOP rewards */
 void stake::claimdop(const name& owner_account)
 {
     require_auth(owner_account);
@@ -167,7 +168,7 @@ void stake::claimdop(const name& owner_account)
 
     asset dop_unclaimed = staked_it->dop_unclaimed_amount;
     check(dop_unclaimed.amount != 0,"error: no DOP available to claim.");
-    // Transfer the user his dop, and then set his "dop_unclaimed_amount" field to zero and also updates "dop_claimed_amount".
+    /* Transfer the user his dop, and then set his "dop_unclaimed_amount" field to zero and also updates "dop_claimed_amount" */
     stake::inline_transferdop(get_self(), owner_account, dop_unclaimed, "I'm claiming DOP!!!");
     staked.modify(staked_it, get_self(), [&](auto& row) 
     {   
@@ -175,7 +176,7 @@ void stake::claimdop(const name& owner_account)
         row.dop_claimed_amount.amount += dop_unclaimed.amount;
     });
 }
-// This is the claim() action that the users call to claim their unclaimed DMD rewards.
+/* This is the claim() action that the users call to claim their unclaimed DMD rewards */
 void stake::claimdmd(const name& owner_account)
 {
     require_auth(owner_account);
@@ -186,7 +187,7 @@ void stake::claimdmd(const name& owner_account)
 
     asset dmd_unclaimed = staked_it->dmd_unclaimed_amount;
     check(dmd_unclaimed.amount != 0,"error: no DMD available to claim.");
-    // Transfer the user his dmd, and then set his "dmd_unclaimed_amount" field to zero and also updates "dmd_claimed_amount".
+    /* Transfer the user his dmd, and then set his "dmd_unclaimed_amount" field to zero and also updates "dmd_claimed_amount" */
     stake::inline_transferdmd(get_self(), owner_account, dmd_unclaimed, "I'm claiming DMD!!!");
     staked.modify(staked_it, get_self(), [&](auto& row) 
     {   
@@ -196,8 +197,8 @@ void stake::claimdmd(const name& owner_account)
 }
 
 void stake::withdraw(const name& owner_account)
-{    // Lets the user withdraw his "staked_amount".
-    // Only proceed if locked == false (the staking period is over)
+{      /* Lets the user withdraw his "staked_amount" */
+/* Only proceed if locked == false (the staking period is over) */
     require_auth(owner_account);
 
     totaltable totalstaked(get_self(), "totals"_n.value);
