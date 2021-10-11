@@ -61,6 +61,8 @@ void stake::set(const asset& total_staked_hub, const asset& total_staked_dop, co
 }
 /*
 */
+void stake::issue()
+{
     require_auth( "worker.efi"_n ); // Need to require auth worker.efi
 
     totaltable totalstaked(get_self(), "totals"_n.value); 
@@ -83,11 +85,12 @@ void stake::set(const asset& total_staked_hub, const asset& total_staked_dop, co
     uint32_t seconds_passed = now - last_reward_time;
     eosio::print_f("Seconds passed since last issue(): [%] \n",seconds_passed);
     // Determine how much total reward should be issued in this period for each of the coins: hub, dmd, dop.
-    uint32_t total_hub_released = seconds_passed * hub_issue_frequency;
-    uint32_t total_dop_released = seconds_passed * dop_issue_frequency;
-    uint32_t total_dmd_released = seconds_passed * dmd_issue_frequency;
+    uint32_t total_hub_released = seconds_passed * hub_issue_frequency; // algorithm
+    uint32_t total_dop_released = seconds_passed * dop_issue_frequency; // algorithm
+    uint32_t total_dmd_released = seconds_passed * dmd_issue_frequency; // algorithm
 
     // We will iterate through the "staketable staked" table, and update each user's unclaimed_amount() field
+    // Original iteration code: https://developers.eos.io/manuals/eosio.cdt/v1.8/how-to-guides/key-value-api/kv_table/how-to-iterate-kv-table
     staketable staked(get_self(), get_self().value);
 
     auto begin_itr = staked.begin();
@@ -100,14 +103,18 @@ void stake::set(const asset& total_staked_hub, const asset& total_staked_dop, co
         staked.modify(begin_itr, get_self(), [&]( auto& row ) 
         { // Modify the table entries to increase user's "unclaimed_amount"
             if (row.hub_staked_amount.amount > 0){
-                float hub_percentage = float(row.hub_staked_amount.amount)/float(hub_total_staked) * 100; 
+                float hub_percentage = float(row.hub_staked_amount.amount)/float(hub_total_staked) * 100; // Either afloat or a larger uint where we use math to get decimal precision of the percentage.
+                eosio::print_f("hub_percentage: [%] \n",hub_percentage);
+                eosio::print_f("row.hub_staked_amount.amount: [%] \n",row.hub_staked_amount.amount);
+                eosio::print_f("---- \n");
+                eosio::print_f("hub_total_staked: [%] \n",hub_total_staked);
                 row.hub_unclaimed_amount.amount += (hub_percentage*total_hub_released)/0.01/10000;} // /10000 is for coins with precision 4
             if (row.dop_staked_amount.amount > 0){
-                uint32_t dop_percentage = row.dop_staked_amount.amount/dop_total_staked * 100; 
+                uint32_t dop_percentage = row.dop_staked_amount.amount/dop_total_staked * 100; // Either afloat or a larger uint where we use math to get decimal precision of the percentage.
                 row.dop_unclaimed_amount.amount += (dop_percentage*total_dop_released)/0.01/10000;} // /10000 is for coins with precision 4
 
             if (row.dmd_staked_amount.amount > 0){
-                uint32_t dmd_percentage = row.dmd_staked_amount.amount/dmd_total_staked * 100;
+                uint32_t dmd_percentage = row.dmd_staked_amount.amount/dmd_total_staked * 100; // Either afloat or a larger uint where we use math to get decimal precision of the percentage.
                 row.dmd_unclaimed_amount.amount += (dmd_percentage*total_dmd_released)/0.01/10000;} // /10000 is for coins with precision 4
         });
         ++ begin_itr;
