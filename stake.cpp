@@ -5,13 +5,12 @@ This is the EFi V2 Steak Contract.
 void stake::setlocked(bool locked)
 { /* This function lets us set the 'locked' variable true or false for the 31 day staking. */
     require_auth(get_self());
+
     totaltable totalstaked(get_self(), "totals"_n.value); 
-
-    uint32_t now = current_time_point().sec_since_epoch();
-
     auto total_it = totalstaked.find("totals"_n.value);
     if(total_it != totalstaked.end()) 
     {
+        uint32_t now = current_time_point().sec_since_epoch();
         totalstaked.modify(total_it, get_self(), [&]( auto& row ) 
         {
             row.locked = locked;
