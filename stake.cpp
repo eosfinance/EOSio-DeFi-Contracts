@@ -1,3 +1,10 @@
+/*
+Well, let's say we release 0.1 DOP every second. That means 360 DOP per hour, 8640 DOP per day or 3,153,600 DOP per year.
+So in this sense, if we have 3.1 mil DOP staking, the APR will be 100%, if we have 1.55 mil DOP staking, APR = 200%.
+750k DOP staking, APR = 400%, 
+375k DOP, APR = 800%
+37k DOP, APR = 8000% etc.
+*/
 #include <stake.hpp>
 /*
 This is the EFi V2 Steak Contract.
@@ -116,18 +123,17 @@ void stake::issue()
         { // Modify the table entries to increase user's "unclaimed_amount"
             if (row.hub_staked_amount.amount > 0){
                 float hub_percentage = float(row.hub_staked_amount.amount)/float(hub_total_staked) * 100;
-                eosio::print_f("hub_percentage: [%] \n",hub_percentage);
-                eosio::print_f("row.hub_staked_amount.amount: [%] \n",row.hub_staked_amount.amount);
-                eosio::print_f("---- \n");
-                eosio::print_f("hub_total_staked: [%] \n",hub_total_staked);
-                row.hub_unclaimed_amount.amount += (hub_percentage*total_hub_released)/0.01/10000;} // (divided by 10000) for coins with precision 4
+                // (divided by 10000) for coins with precision 4
+                row.hub_unclaimed_amount.amount += (hub_percentage*total_hub_released)/0.01/10000;}
             if (row.dop_staked_amount.amount > 0){
                 uint32_t dop_percentage = row.dop_staked_amount.amount/dop_total_staked * 100;
-                row.dop_unclaimed_amount.amount += (dop_percentage*total_dop_released)/0.01/10000;} // (divided by 10000) for coins with precision 4
+                // (divided by 10000) for coins with precision 4
+                row.dop_unclaimed_amount.amount += (dop_percentage*total_dop_released)/0.01/10000;}
 
             if (row.dmd_staked_amount.amount > 0){
                 uint32_t dmd_percentage = row.dmd_staked_amount.amount/dmd_total_staked * 100;
-                row.dmd_unclaimed_amount.amount += (dmd_percentage*total_dmd_released)/0.01/10000;} // (divided by 10000) for coins with precision 4
+                // (divided by 10000) for coins with precision 4
+                row.dmd_unclaimed_amount.amount += (dmd_percentage*total_dmd_released)/0.01/10000;}
         });
         ++ begin_itr;
         ++ current_iteration;
