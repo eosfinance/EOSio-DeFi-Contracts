@@ -132,7 +132,6 @@ void stake::issue()
         row.last_reward_time = now;
     });
 }
-
 // This is the claim() action that the users call to claim their unclaimed HUB rewards.
 void stake::claimhub(const name& owner_account)
 {
@@ -152,7 +151,6 @@ void stake::claimhub(const name& owner_account)
         row.hub_claimed_amount.amount += hub_unclaimed.amount;
     });
 }
-
 // This is the claim() action that the users call to claim their unclaimed DOP rewards.
 void stake::claimdop(const name& owner_account)
 {
@@ -172,7 +170,6 @@ void stake::claimdop(const name& owner_account)
         row.dop_claimed_amount.amount += dop_unclaimed.amount;
     });
 }
-
 // This is the claim() action that the users call to claim their unclaimed DMD rewards.
 void stake::claimdmd(const name& owner_account)
 {
@@ -249,7 +246,6 @@ void stake::withdraw(const name& owner_account)
             row.dmd_staked_amount.amount = 0;
         });}
 }
-
 /* This is what happens when users send DMD , HUB or DOP to the V2 Staking contract. Or when they click Stake on the website. */
 [[eosio::on_notify("hub.efi::transfer")]]
 void stake::stakehub(const name& owner_account, const name& to, const asset& stake_quantity_hub, std::string memo)
@@ -332,7 +328,7 @@ void stake::stakedop(const name& owner_account, const name& to, const asset& sta
     totalstaked.modify(total_it, get_self(), [&]( auto& row ) 
     {
         row.key = "totals"_n;
-        row.dop_total_staked += stake_quantity_dop; // Have to check that it doesn't update the value if locked == false and the tx fails the check.
+        row.dop_total_staked += stake_quantity_dop;
     });
 
     staketable staked(get_self(), get_self().value);
@@ -386,7 +382,7 @@ void stake::stakedmd(const name& owner_account, const name& to, const asset& sta
     totalstaked.modify(total_it, get_self(), [&]( auto& row ) 
     {
         row.key = "totals"_n;
-        row.dmd_total_staked += stake_quantity_dmd; // Have to check that it doesn't update the value if locked == false and the tx fails the check.
+        row.dmd_total_staked += stake_quantity_dmd; 
     });
 
     staketable staked(get_self(), get_self().value);
