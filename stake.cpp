@@ -39,7 +39,7 @@ void stake::set(const asset& total_staked_hub, const asset& total_staked_dop, co
             row.hub_total_staked      = total_staked_hub;
             row.dop_total_staked      = total_staked_dop;
             row.dmd_total_staked      = total_staked_dmd;
-            row.locked                = 0; // We'll always set the locked to zero on set(). We have to do two things to initialize the swap.
+            row.locked                = 0; // We'll always set the locked to zero on set(). We have to do two things to initialize the staking.
             row.hub_issue_frequency   = hub_issue_frequency; // How many HUBs are issued per second (will be multiplied by 1000 to fit the precision)
             row.dop_issue_frequency   = dop_issue_frequency; // How many DOPs are issued per second (will be multiplied by 1000 to fit the precision)
             row.dmd_issue_frequency   = dmd_issue_frequency; // How many DMDs are issued per second (will be multiplied by 1000 to fit the precision)
@@ -52,7 +52,7 @@ void stake::set(const asset& total_staked_hub, const asset& total_staked_dop, co
             row.hub_total_staked      = total_staked_hub;
             row.dop_total_staked      = total_staked_dop;
             row.dmd_total_staked      = total_staked_dmd;
-            row.locked                = 0; // We'll always set the locked to zero on set(). We have to do two things to initialize the swap.
+            row.locked                = 0; // We'll always set the locked to zero on set(). We have to do two things to initialize the staking.
             row.hub_issue_frequency   = hub_issue_frequency; // How many HUBs are issued per second (will be multiplied by 1000 to fit the precision)
             row.dop_issue_frequency   = dop_issue_frequency; // How many DOPs are issued per second (will be multiplied by 1000 to fit the precision)
             row.dmd_issue_frequency   = dmd_issue_frequency; // How many DMDs are issued per second (will be multiplied by 1000 to fit the precision)
