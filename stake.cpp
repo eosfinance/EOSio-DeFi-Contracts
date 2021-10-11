@@ -140,9 +140,9 @@ void stake::issue()
 // This is the claim() action that the users call to claim their unclaimed HUB rewards.
 void stake::claimhub(const name& owner_account)
 {
-    require_auth( owner_account );
+    require_auth(owner_account);
 
-    staketable staked( get_self(), get_self().value);
+    staketable staked(get_self(), get_self().value);
     auto staked_it = staked.find(owner_account.value);
     check(staked_it != staked.end(), "error: no deposits detected. stake some coins first."); 
 
@@ -161,7 +161,7 @@ void stake::claimdop(const name& owner_account)
 {
     require_auth(owner_account);
 
-    staketable staked( get_self(), get_self().value);
+    staketable staked(get_self(), get_self().value);
     auto staked_it = staked.find( owner_account.value);
     check(staked_it != staked.end(), "error: no deposits detected. stake some coins first."); 
 
@@ -207,7 +207,7 @@ void stake::withdraw(const name& owner_account)
     check(total_it->locked == false, "error: you can not withdraw your stake before the locking period ends.");
 
     staketable staked(get_self(), get_self().value);
-    auto staked_it = staked.find( owner_account.value );
+    auto staked_it = staked.find(owner_account.value);
     check(staked_it != staked.end(), "error: no deposits detected for user.");
 
     bool empty = false;
@@ -269,24 +269,23 @@ void stake::stakehub(const name& owner_account, const name& to, const asset& sta
     totaltable totalstaked(get_self(), "totals"_n.value);
     auto total_it = totalstaked.find("totals"_n.value);
     check(total_it != totalstaked.end(), "error: totals table is not initiated."); 
-    // We have to check to see if we can get the value of locked right here
-    // We also have to check to see if locked == false, and if so, we won't allow anyone to send EOS.
+    /* We have to check to see if we can get the value of locked right here */
+    /* We also have to check to see if locked == false, and if so, we won't allow anyone to send EOS */
     bool locked = total_it->locked;
     check(locked == true, "error: the staking event has ended.");
 
-    // Update the total staked variable in the table.
-    totalstaked.modify(total_it, get_self(), [&]( auto& row ) 
+    /* Update the total staked variable in the table */
+    totalstaked.modify(total_it, get_self(), [&](auto& row) 
     {
-        row.key = "totals"_n;
         row.hub_total_staked += stake_quantity_hub;
     });
 
     staketable staked(get_self(), get_self().value);
 
-    auto it = staked.find(owner_account.value);
-    if( it == staked.end() ) // First time depositing into staking.
+    auto staked_it = staked.find(owner_account.value);
+    if(staked_it == staked.end()) /* First time depositing into staking */
     {
-        staked.emplace( get_self(), [&]( auto& row )
+        staked.emplace(get_self(), [&](auto& row)
         {
             row.owner_account = owner_account;
             row.hub_staked_amount = stake_quantity_hub;
@@ -298,7 +297,7 @@ void stake::stakehub(const name& owner_account, const name& to, const asset& sta
     } 
     else 
     {
-        staked.modify(it, get_self(), [&]( auto& row ) 
+        staked.modify(staked_it, get_self(), [&](auto& row) 
         {   
             row.hub_staked_amount.amount += stake_quantity_hub.amount;
         });
@@ -315,7 +314,7 @@ void stake::stakedop(const name& owner_account, const name& to, const asset& sta
     }
 
     if (owner_account == "efi"_n)
-        return;  /* This account can always send coins to the staking contract to top it off */
+        return;  /* This account can always send DOP to the staking contract to top it off */
 
     check(stake_quantity_dop.amount > 0, "error: when pigs fly.");
     check(stake_quantity_dop.symbol == dop_symbol, "error: these are not the droids you are looking for.");
@@ -323,24 +322,23 @@ void stake::stakedop(const name& owner_account, const name& to, const asset& sta
     totaltable totalstaked(get_self(), "totals"_n.value);
     auto total_it = totalstaked.find("totals"_n.value);
     check(total_it != totalstaked.end(), "error: totals table is not initiated."); 
-    // We have to check to see if we can get the value of locked right here
-    // We also have to check to see if locked == false, and if so, we won't allow anyone to send EOS.
+    /* We have to check to see if we can get the value of locked right here */
+    /* We also have to check to see if locked == false, and if so, we won't allow anyone to send EOS */
     bool locked = total_it->locked;
     check(locked == true, "error: the staking event has ended.");
 
-    // Update the total staked variable in the table.
-    totalstaked.modify(total_it, get_self(), [&]( auto& row ) 
+    /* Update the total staked variable in the table */
+    totalstaked.modify(total_it, get_self(), [&](auto& row) 
     {
-        row.key = "totals"_n;
         row.dop_total_staked += stake_quantity_dop;
     });
 
     staketable staked(get_self(), get_self().value);
 
-    auto it = staked.find( owner_account.value );
-    if( it == staked.end() ) // First time depositing into staking.
+    auto staked_it = staked.find(owner_account.value);
+    if(staked_it == staked.end()) /* First time depositing into staking */
     {
-        staked.emplace( get_self(), [&]( auto& row )
+        staked.emplace(get_self(), [&](auto& row)
         {
             row.owner_account = owner_account;
             row.dop_staked_amount = stake_quantity_dop;
@@ -352,7 +350,7 @@ void stake::stakedop(const name& owner_account, const name& to, const asset& sta
     } 
     else 
     {
-        staked.modify(it, get_self(), [&]( auto& row ) 
+        staked.modify(staked_it, get_self(), [&](auto& row) 
         {   
             row.dop_staked_amount.amount += stake_quantity_dop.amount;
         });
@@ -369,7 +367,7 @@ void stake::stakedmd(const name& owner_account, const name& to, const asset& sta
     }
 
     if (owner_account == "efi"_n)
-        return;  /* This account can always send coins to the staking contract to top it off */
+        return;  /* This account can always send DMD to the staking contract to top it off */
 
     check(stake_quantity_dmd.amount > 0, "error: when pigs fly.");
     check(stake_quantity_dmd.symbol == dmd_symbol, "error: these are not the droids you are looking for.");
@@ -377,24 +375,23 @@ void stake::stakedmd(const name& owner_account, const name& to, const asset& sta
     totaltable totalstaked(get_self(), "totals"_n.value);
     auto total_it = totalstaked.find("totals"_n.value);
     check(total_it != totalstaked.end(), "error: totals table is not initiated."); 
-    // We have to check to see if we can get the value of locked right here
-    // We also have to check to see if locked == false, and if so, we won't allow anyone to send EOS.
+    /* We have to check to see if we can get the value of locked right here */
+    /* We also have to check to see if locked == false, and if so, we won't allow anyone to send EOS */
     bool locked = total_it->locked;
     check(locked == true, "error: the staking event has ended.");
 
-    // Update the total staked variable in the table.
-    totalstaked.modify(total_it, get_self(), [&]( auto& row ) 
+    /* Update the total staked variable in the table */
+    totalstaked.modify(total_it, get_self(), [&](auto& row) 
     {
-        row.key = "totals"_n;
-        row.dmd_total_staked += stake_quantity_dmd; 
+        row.dmd_total_staked += stake_quantity_dmd;
     });
 
     staketable staked(get_self(), get_self().value);
 
-    auto it = staked.find( owner_account.value );
-    if( it == staked.end() ) // First time depositing into staking.
+    auto staked_it = staked.find(owner_account.value);
+    if(staked_it == staked.end()) /* First time depositing into staking */
     {
-        staked.emplace( get_self(), [&]( auto& row )
+        staked.emplace(get_self(), [&](auto& row)
         {
             row.owner_account = owner_account;
             row.dmd_staked_amount = stake_quantity_dmd;
@@ -406,7 +403,7 @@ void stake::stakedmd(const name& owner_account, const name& to, const asset& sta
     } 
     else 
     {
-        staked.modify(it, get_self(), [&]( auto& row ) 
+        staked.modify(staked_it, get_self(), [&](auto& row) 
         {   
             row.dmd_staked_amount.amount += stake_quantity_dmd.amount;
         });
