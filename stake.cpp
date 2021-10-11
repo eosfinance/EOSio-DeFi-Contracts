@@ -189,34 +189,35 @@ void stake::withdraw(const name& owner_account)
     totaltable totalstaked(get_self(), "totals"_n.value);
     auto total_it = totalstaked.find("totals"_n.value);
     check(total_it != totalstaked.end(), "error: totals table is not initiated."); 
+    // prints the test_primary and datum fields stored for user parameter
     check(total_it->locked == false, "error: you can not withdraw your stake before the locking period ends.");
 
     staketable staked( get_self(), get_self().value );
     auto staked_it = staked.find( owner_account.value );
     check(staked_it != staked.end(), "error: no deposits detected for user.");
 
-    asset hub_staked = staked_it->hub_staked_amount;
-    asset dop_staked = staked_it->dop_staked_amount;
-    asset dmd_staked = staked_it->dmd_staked_amount;
+    bool empty = false;
+    if (staked_it->hub_staked_amount.amount == 0 && staked_it->dop_staked_amount.amount == 0 && staked_it->dmd_staked_amount.amount == 0)
+        empty = true;
 
-    check(hub_staked.amount != 0 && dop_staked.amount != 0 && dmd_staked.amount != 0, "error: no deposits detected for user.");
+    check(!empty, "error: no deposits detected for user*.");
 
-    if (hub_staked.amount > 0){
-        stake::inline_transferhub(get_self(), owner_account, hub_staked, "I'm withdrawing HUB from V2 staking!!!");
+    if (staked_it->hub_staked_amount.amount > 0){
+        stake::inline_transferhub(get_self(), owner_account, staked_it->hub_staked_amount, "I'm withdrawing HUB from V2 staking!!!");
         staked.modify(staked_it, get_self(), [&]( auto& row ) 
         {   
             row.hub_staked_amount.amount = 0;
         });}
 
-    if (dop_staked.amount > 0){
-        stake::inline_transferdop(get_self(), owner_account, dop_staked, "I'm withdrawing DOP from V2 staking!!!");
+    if (staked_it->dop_staked_amount.amount > 0){
+        stake::inline_transferdop(get_self(), owner_account, staked_it->dop_staked_amount, "I'm withdrawing DOP from V2 staking!!!");
         staked.modify(staked_it, get_self(), [&]( auto& row ) 
         {   
             row.dop_staked_amount.amount = 0;
         });}
 
-    if (dmd_staked.amount > 0){
-        stake::inline_transferdmd(get_self(), owner_account, dmd_staked, "I'm withdrawing DMD from V2 staking!!!");
+    if (staked_it->dmd_staked_amount.amount > 0){
+        stake::inline_transferdmd(get_self(), owner_account, staked_it->dmd_staked_amount, "I'm withdrawing DMD from V2 staking!!!");
         staked.modify(staked_it, get_self(), [&]( auto& row ) 
         {   
             row.dmd_staked_amount.amount = 0;
