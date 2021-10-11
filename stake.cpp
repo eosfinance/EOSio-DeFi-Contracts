@@ -21,7 +21,7 @@ void stake::setlocked(bool locked)
     else 
         return;
 }
-/* Setter function that needs to be called after the contract is deployed to initialize the totals table (with 0, preferably, except the bonus, maybe.) */
+/* Setter function that needs to be called after the contract is deployed to initialize the totals table. */
 void stake::set(const asset& total_staked_hub, const asset& total_staked_dop, const asset& total_staked_dmd, 
             uint32_t hub_issue_frequency, uint32_t dop_issue_frequency, uint32_t dmd_issue_frequency)
 {
@@ -39,10 +39,12 @@ void stake::set(const asset& total_staked_hub, const asset& total_staked_dop, co
             row.hub_total_staked      = total_staked_hub;
             row.dop_total_staked      = total_staked_dop;
             row.dmd_total_staked      = total_staked_dmd;
-            row.locked                = 0; // We'll always set the locked to zero on set(). We have to do two things to initialize the staking.
-            row.hub_issue_frequency   = hub_issue_frequency; // How many HUBs are issued per second (will be multiplied by 1000 to fit the precision)
-            row.dop_issue_frequency   = dop_issue_frequency; // How many DOPs are issued per second (will be multiplied by 1000 to fit the precision)
-            row.dmd_issue_frequency   = dmd_issue_frequency; // How many DMDs are issued per second (will be multiplied by 1000 to fit the precision)
+            // We'll always set the locked to zero on set(). We have to do two things to initialize the staking.
+            row.locked                = 0; 
+            // How many coins are issued per second (will be multiplied by 1000 to fit the precision)
+            row.hub_issue_frequency   = hub_issue_frequency;
+            row.dop_issue_frequency   = dop_issue_frequency;
+            row.dmd_issue_frequency   = dmd_issue_frequency;
             row.last_reward_time = now;
         });
     } 
@@ -52,22 +54,24 @@ void stake::set(const asset& total_staked_hub, const asset& total_staked_dop, co
             row.hub_total_staked      = total_staked_hub;
             row.dop_total_staked      = total_staked_dop;
             row.dmd_total_staked      = total_staked_dmd;
-            row.locked                = 0; // We'll always set the locked to zero on set(). We have to do two things to initialize the staking.
-            row.hub_issue_frequency   = hub_issue_frequency; // How many HUBs are issued per second (will be multiplied by 1000 to fit the precision)
-            row.dop_issue_frequency   = dop_issue_frequency; // How many DOPs are issued per second (will be multiplied by 1000 to fit the precision)
-            row.dmd_issue_frequency   = dmd_issue_frequency; // How many DMDs are issued per second (will be multiplied by 1000 to fit the precision)
+            // We'll always set the locked to zero on set(). We have to do two things to initialize the staking.
+            row.locked                = 0; 
+            // How many coins are issued per second (will be multiplied by 1000 to fit the precision)
+            row.hub_issue_frequency   = hub_issue_frequency;
+            row.dop_issue_frequency   = dop_issue_frequency;
+            row.dmd_issue_frequency   = dmd_issue_frequency;
             row.last_reward_time = now;
         });
 }
 // For added security, we can feed the staking contract with a bit of coins every day, so we don't have to give it the maximum number of coins.
 void stake::issue()
 {
-/* - It looks at the time passed since last issue() call.
+/* - Looks at the time passed since last issue() call.
    - The issue() action will need to calculate what to add to the "unclaimed_rewards" field value. 
    - The "unclaimed_rewards" are zeroed when the user calls claim() successfully and receives all unclaimed rewards.
    - The issue() action will issue the same amount of tokens for every second that passed since the last_reward_time field value. 
    - The new tokens are issued to that period's pool. Then, it will update the unclaimed_reward field for each user. 
-   - It looks at what percentage of the period's pool the user has and then, it adds the appropiate value in the unclaimed_reward(). */
+   - Looks at what percentage of the period's pool the user has and then, it adds the appropiate value in the unclaimed_reward(). */
     require_auth( "worker.efi"_n ); // issue() is called by the efi worker.
 
     totaltable totalstaked(get_self(), "totals"_n.value); 
@@ -80,7 +84,7 @@ void stake::issue()
     uint32_t last_reward_time     = total_it->last_reward_time;
     uint16_t issue_precision      = 100; // This means that if "issue_frequency" == 100, we release 1 token per second.
                                         //   and if "issue_frequency" == 1: we release 0.01 tokens per second.
-    // Coins issued every second. Times 10,000 to make up for the precision 4 tokens. Divided by "issue_precision" for extra precision.
+    // Coins issued every second. Multiplied by 10000 for tokens with precision 4. Divided by "issue_precision" for extra control.
     uint32_t hub_issue_frequency  = total_it->hub_issue_frequency*10000/issue_precision;
     uint32_t dop_issue_frequency  = total_it->dop_issue_frequency*10000/issue_precision;
     uint32_t dmd_issue_frequency  = total_it->dmd_issue_frequency*10000/issue_precision;
