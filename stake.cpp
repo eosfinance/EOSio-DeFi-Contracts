@@ -103,18 +103,18 @@ void stake::issue()
         staked.modify(begin_itr, get_self(), [&]( auto& row ) 
         { // Modify the table entries to increase user's "unclaimed_amount"
             if (row.hub_staked_amount.amount > 0){
-                float hub_percentage = float(row.hub_staked_amount.amount)/float(hub_total_staked) * 100; // Either afloat or a larger uint where we use math to get decimal precision of the percentage.
+                float hub_percentage = float(row.hub_staked_amount.amount)/float(hub_total_staked) * 100;
                 eosio::print_f("hub_percentage: [%] \n",hub_percentage);
                 eosio::print_f("row.hub_staked_amount.amount: [%] \n",row.hub_staked_amount.amount);
                 eosio::print_f("---- \n");
                 eosio::print_f("hub_total_staked: [%] \n",hub_total_staked);
                 row.hub_unclaimed_amount.amount += (hub_percentage*total_hub_released)/0.01/10000;} // /10000 is for coins with precision 4
             if (row.dop_staked_amount.amount > 0){
-                uint32_t dop_percentage = row.dop_staked_amount.amount/dop_total_staked * 100; // Either afloat or a larger uint where we use math to get decimal precision of the percentage.
+                uint32_t dop_percentage = row.dop_staked_amount.amount/dop_total_staked * 100; 
                 row.dop_unclaimed_amount.amount += (dop_percentage*total_dop_released)/0.01/10000;} // /10000 is for coins with precision 4
 
             if (row.dmd_staked_amount.amount > 0){
-                uint32_t dmd_percentage = row.dmd_staked_amount.amount/dmd_total_staked * 100; // Either afloat or a larger uint where we use math to get decimal precision of the percentage.
+                uint32_t dmd_percentage = row.dmd_staked_amount.amount/dmd_total_staked * 100;
                 row.dmd_unclaimed_amount.amount += (dmd_percentage*total_dmd_released)/0.01/10000;} // /10000 is for coins with precision 4
         });
         ++ begin_itr;
