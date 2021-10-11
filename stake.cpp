@@ -4,15 +4,15 @@ This is the EFi V2 Steak Contract.
 */
 void stake::setlocked(bool locked)
 { /* This function lets us set the 'locked' variable true or false for the 31 day staking. */
-    require_auth( get_self() );
-    totaltable totalswapped(get_self(), "totals"_n.value); 
+    require_auth(get_self());
+    totaltable totalstaked(get_self(), "totals"_n.value); 
 
     uint32_t now = current_time_point().sec_since_epoch();
 
-    auto total_it = totalswapped.find("totals"_n.value);
-    if(total_it != totalswapped.end()) 
+    auto total_it = totalstaked.find("totals"_n.value);
+    if(total_it != totalstaked.end()) 
     {
-        totalswapped.modify(total_it, get_self(), [&]( auto& row ) 
+        totalstaked.modify(total_it, get_self(), [&]( auto& row ) 
         {
             row.locked = locked;
             row.last_reward_time = now;
@@ -25,7 +25,7 @@ void stake::setlocked(bool locked)
 void stake::set(const asset& total_staked_hub, const asset& total_staked_dop, const asset& total_staked_dmd, 
             uint32_t hub_issue_frequency, uint32_t dop_issue_frequency, uint32_t dmd_issue_frequency)
 {
-    require_auth( get_self() );
+    require_auth(get_self());
     totaltable totalstaked(get_self(), "totals"_n.value);
 
     uint32_t now = current_time_point().sec_since_epoch();
@@ -33,7 +33,7 @@ void stake::set(const asset& total_staked_hub, const asset& total_staked_dop, co
     auto total_it = totalstaked.find("totals"_n.value);
     if(total_it == totalstaked.end()) 
     {
-        totalstaked.emplace(get_self(), [&]( auto& row) 
+        totalstaked.emplace(get_self(), [&](auto& row) 
         {
             row.key                   = "totals"_n;
             row.hub_total_staked      = total_staked_hub;
@@ -132,7 +132,7 @@ void stake::issue()
         ++ current_iteration;
     }
     // Log the last reward time.
-    totalstaked.modify(total_it, get_self(), [&]( auto& row ) 
+    totalstaked.modify(total_it, get_self(), [&](auto& row) 
     {
         row.last_reward_time = now;
     });
@@ -150,7 +150,7 @@ void stake::claimhub(const name& owner_account)
     check(hub_unclaimed.amount != 0,"error: no HUB available to claim.");
     // Transfer the user his hub, and then set his "hub_unclaimed_amount" field to zero and also updates "hub_claimed_amount".
     stake::inline_transferhub(get_self(), owner_account, hub_unclaimed, "I'm claiming HUB!!!");
-    staked.modify(staked_it, get_self(), [&]( auto& row ) 
+    staked.modify(staked_it, get_self(), [&](auto& row) 
     {   
         row.hub_unclaimed_amount.amount = 0;
         row.hub_claimed_amount.amount += hub_unclaimed.amount;
@@ -188,7 +188,7 @@ void stake::claimdmd(const name& owner_account)
     check(dmd_unclaimed.amount != 0,"error: no DMD available to claim.");
     // Transfer the user his dmd, and then set his "dmd_unclaimed_amount" field to zero and also updates "dmd_claimed_amount".
     stake::inline_transferdmd(get_self(), owner_account, dmd_unclaimed, "I'm claiming DMD!!!");
-    staked.modify(staked_it, get_self(), [&]( auto& row) 
+    staked.modify(staked_it, get_self(), [&](auto& row) 
     {   
         row.dmd_unclaimed_amount.amount = 0;
         row.dmd_claimed_amount.amount += dmd_unclaimed.amount;
@@ -196,9 +196,8 @@ void stake::claimdmd(const name& owner_account)
 }
 
 void stake::withdraw(const name& owner_account)
-{
-    // Lets the user withdraw his "staked_amount".
-    // Only proceed if locked == false (i.e. the staking period is over)
+{    // Lets the user withdraw his "staked_amount".
+    // Only proceed if locked == false (the staking period is over)
     require_auth(owner_account);
 
     totaltable totalstaked(get_self(), "totals"_n.value);
@@ -250,7 +249,7 @@ void stake::withdraw(const name& owner_account)
             row.dmd_staked_amount.amount = 0;
         });}
 }
-/* This is what happens when users send DMD , HUB or DOP to the V2 Staking contract. Or when they click Stake on the website. */
+/* This is what happens when users send DMD , HUB or DOP to the V2 Staking contract or when they click Stake on the website. */
 [[eosio::on_notify("hub.efi::transfer")]]
 void stake::stakehub(const name& owner_account, const name& to, const asset& stake_quantity_hub, std::string memo)
 {
