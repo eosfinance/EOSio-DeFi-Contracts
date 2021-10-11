@@ -206,12 +206,10 @@ void stake::withdraw(const name& owner_account)
     {
         stake::inline_transferhub(get_self(), owner_account, staked_it->hub_staked_amount, "I'm withdrawing HUB from V2 staking!!!");
 
-        totalstaked.modify(total_it, get_self(), [&]( auto& row ) 
-        {
-            row.hub_total_staked -= staked_it->hub_staked_amount; // Have to check that it doesn't update the value if locked == false and the tx fails the check.
+        totalstaked.modify(total_it, get_self(), [&]( auto& row){
+            row.hub_total_staked -= staked_it->hub_staked_amount;
         });
-        staked.modify(staked_it, get_self(), [&]( auto& row ) 
-        {   
+        staked.modify(staked_it, get_self(), [&](auto& row){   
             row.hub_staked_amount.amount = 0;
         });
     }
@@ -220,12 +218,10 @@ void stake::withdraw(const name& owner_account)
     {
         stake::inline_transferdop(get_self(), owner_account, staked_it->dop_staked_amount, "I'm withdrawing DOP from V2 staking!!!");
 
-        totalstaked.modify(total_it, get_self(), [&]( auto& row ) 
-        {
-            row.dop_total_staked -= staked_it->dop_staked_amount; // Have to check that it doesn't update the value if locked == false and the tx fails the check.
+        totalstaked.modify(total_it, get_self(), [&]( auto& row){
+            row.dop_total_staked -= staked_it->dop_staked_amount;
         });
-        staked.modify(staked_it, get_self(), [&]( auto& row ) 
-        {   
+        staked.modify(staked_it, get_self(), [&](auto& row){   
             row.dop_staked_amount.amount = 0;
         });
     }
@@ -233,12 +229,10 @@ void stake::withdraw(const name& owner_account)
     if (staked_it->dmd_staked_amount.amount > 0){
         stake::inline_transferdmd(get_self(), owner_account, staked_it->dmd_staked_amount, "I'm withdrawing DMD from V2 staking!!!");
 
-        totalstaked.modify(total_it, get_self(), [&]( auto& row ) 
-        {
-            row.dmd_total_staked -= staked_it->dmd_staked_amount; // Have to check that it doesn't update the value if locked == false and the tx fails the check.
+        totalstaked.modify(total_it, get_self(), [&](auto& row) {
+            row.dmd_total_staked -= staked_it->dmd_staked_amount;
         });
-        staked.modify(staked_it, get_self(), [&]( auto& row ) 
-        {   
+        staked.modify(staked_it, get_self(), [&](auto& row) {   
             row.dmd_staked_amount.amount = 0;
         });}
 }
