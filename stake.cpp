@@ -78,10 +78,12 @@ void stake::issue()
     check(locked == true, "error: staking has ended.");
 
     uint32_t last_reward_time     = total_it->last_reward_time;
-    // Coins issued every second. Times 10,000 to make up for the precision 4 tokens.
-    uint32_t hub_issue_frequency  = total_it->hub_issue_frequency*10000;
-    uint32_t dop_issue_frequency  = total_it->dop_issue_frequency*10000;
-    uint32_t dmd_issue_frequency  = total_it->dmd_issue_frequency*10000;
+    uint16_t issue_precision      = 100; // This means that if "issue_frequency" == 100, we release 1 token per second.
+                                        //   and if "issue_frequency" == 1: we release 0.01 tokens per second.
+    // Coins issued every second. Times 10,000 to make up for the precision 4 tokens. Divided by "issue_precision" for extra precision.
+    uint32_t hub_issue_frequency  = total_it->hub_issue_frequency*10000/issue_precision;
+    uint32_t dop_issue_frequency  = total_it->dop_issue_frequency*10000/issue_precision;
+    uint32_t dmd_issue_frequency  = total_it->dmd_issue_frequency*10000/issue_precision;
     uint32_t hub_total_staked     = total_it->hub_total_staked.amount;
     uint32_t dop_total_staked     = total_it->dop_total_staked.amount;
     uint32_t dmd_total_staked     = total_it->dmd_total_staked.amount;
@@ -199,7 +201,6 @@ void stake::withdraw(const name& owner_account)
     totaltable totalstaked(get_self(), "totals"_n.value);
     auto total_it = totalstaked.find("totals"_n.value);
     check(total_it != totalstaked.end(), "error: totals table is not initiated."); 
-    // prints the test_primary and datum fields stored for user parameter
     check(total_it->locked == false, "error: you can not withdraw your stake before the locking period ends.");
 
     staketable staked(get_self(), get_self().value);
