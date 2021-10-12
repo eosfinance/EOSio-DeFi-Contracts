@@ -115,18 +115,15 @@ void stake::issue()
         staked.modify(begin_itr, get_self(), [&]( auto& row ) 
         { /* Modify the table entries to increase user's "unclaimed_amount" */
             if (row.hub_staked_amount.amount > 0){
-                float hub_percentage = float(row.hub_staked_amount.amount)/float(hub_total_staked) * 100;
-                /* (divided by 10000) for coins with precision 4 */
-                row.hub_unclaimed_amount.amount += (hub_percentage*total_hub_released)/0.01/10000;}
+                float hub_percentage = float(row.hub_staked_amount.amount)/float(hub_total_staked) * 100; 
+                row.hub_unclaimed_amount.amount += (hub_percentage*total_hub_released)/0.01/10000;} /* (divided by 10000) for coins with precision 4 */
             if (row.dop_staked_amount.amount > 0){
-                uint32_t dop_percentage = row.dop_staked_amount.amount/dop_total_staked * 100;
-                /* (divided by 10000) for coins with precision 4 */
-                row.dop_unclaimed_amount.amount += (dop_percentage*total_dop_released)/0.01/10000;}
+                float dop_percentage = float(row.dop_staked_amount.amount)/float(dop_total_staked) * 100;
+                row.dop_unclaimed_amount.amount += (dop_percentage*total_dop_released)/0.01/10000;} /* (divided by 10000) for coins with precision 4 */
 
             if (row.dmd_staked_amount.amount > 0){
-                uint32_t dmd_percentage = row.dmd_staked_amount.amount/dmd_total_staked * 100;
-                /* (divided by 10000) for coins with precision 4 */
-                row.dmd_unclaimed_amount.amount += (dmd_percentage*total_dmd_released)/0.01/10000;}
+                float dmd_percentage = float(row.dmd_staked_amount.amount)/float(dmd_total_staked) * 100;
+                row.dmd_unclaimed_amount.amount += (dmd_percentage*total_dmd_released)/0.01/10000;} /* (divided by 10000) for coins with precision 4 */
         });
         ++ begin_itr;
         ++ current_iteration;
@@ -282,8 +279,8 @@ void stake::stakehub(const name& owner_account, const name& to, const asset& sta
     staketable staked(get_self(), get_self().value);
 
     auto staked_it = staked.find(owner_account.value);
-    if(staked_it == staked.end()) /* First time depositing into staking */
-    {
+    if(staked_it == staked.end())
+    { /* First time depositing anything into staking */
         staked.emplace(get_self(), [&](auto& row)
         {
             row.owner_account = owner_account;
@@ -293,9 +290,20 @@ void stake::stakehub(const name& owner_account, const name& to, const asset& sta
             row.hub_unclaimed_amount.amount = 0;
             row.hub_claimed_amount.amount = 0;
         });
-    } 
-    else 
-    {
+    }
+    else if (staked_it->hub_staked_amount.amount == 0)
+    { /* First time depositing HUB, but he has deposited another type of coin before */
+        staked.modify(staked_it, get_self(), [&](auto& row) 
+        {   
+            row.hub_staked_amount = stake_quantity_hub;
+            row.hub_unclaimed_amount = stake_quantity_hub;
+            row.hub_claimed_amount = stake_quantity_hub;
+            row.hub_unclaimed_amount.amount = 0;
+            row.hub_claimed_amount.amount = 0;
+        });
+    }
+    else
+    { /* It's not his first time depositing this type of coin */
         staked.modify(staked_it, get_self(), [&](auto& row) 
         {   
             row.hub_staked_amount.amount += stake_quantity_hub.amount;
@@ -335,8 +343,8 @@ void stake::stakedop(const name& owner_account, const name& to, const asset& sta
     staketable staked(get_self(), get_self().value);
 
     auto staked_it = staked.find(owner_account.value);
-    if(staked_it == staked.end()) /* First time depositing into staking */
-    {
+    if(staked_it == staked.end())
+    { /* First time depositing anything into staking */
         staked.emplace(get_self(), [&](auto& row)
         {
             row.owner_account = owner_account;
@@ -346,9 +354,20 @@ void stake::stakedop(const name& owner_account, const name& to, const asset& sta
             row.dop_unclaimed_amount.amount = 0;
             row.dop_claimed_amount.amount = 0;
         });
-    } 
-    else 
-    {
+    }
+    else if (staked_it->dop_staked_amount.amount == 0)
+    { /* First time depositing DOP, but he has deposited another type of coin before */
+        staked.modify(staked_it, get_self(), [&](auto& row) 
+        {   
+            row.dop_staked_amount = stake_quantity_dop;
+            row.dop_unclaimed_amount = stake_quantity_dop;
+            row.dop_claimed_amount = stake_quantity_dop;
+            row.dop_unclaimed_amount.amount = 0;
+            row.dop_claimed_amount.amount = 0;
+        });
+    }
+    else
+    { /* It's not his first time depositing this type of coin */
         staked.modify(staked_it, get_self(), [&](auto& row) 
         {   
             row.dop_staked_amount.amount += stake_quantity_dop.amount;
@@ -388,8 +407,8 @@ void stake::stakedmd(const name& owner_account, const name& to, const asset& sta
     staketable staked(get_self(), get_self().value);
 
     auto staked_it = staked.find(owner_account.value);
-    if(staked_it == staked.end()) /* First time depositing into staking */
-    {
+    if(staked_it == staked.end())
+    { /* First time depositing anything into staking */
         staked.emplace(get_self(), [&](auto& row)
         {
             row.owner_account = owner_account;
@@ -399,9 +418,20 @@ void stake::stakedmd(const name& owner_account, const name& to, const asset& sta
             row.dmd_unclaimed_amount.amount = 0;
             row.dmd_claimed_amount.amount = 0;
         });
-    } 
-    else 
-    {
+    }
+    else if (staked_it->dmd_staked_amount.amount == 0)
+    { /* First time depositing DMD, but he has deposited another type of coin before */
+        staked.modify(staked_it, get_self(), [&](auto& row) 
+        {   
+            row.dmd_staked_amount = stake_quantity_dmd;
+            row.dmd_unclaimed_amount = stake_quantity_dmd;
+            row.dmd_claimed_amount = stake_quantity_dmd;
+            row.dmd_unclaimed_amount.amount = 0;
+            row.dmd_claimed_amount.amount = 0;
+        });
+    }
+    else
+    { /* It's not his first time depositing this type of coin */
         staked.modify(staked_it, get_self(), [&](auto& row) 
         {   
             row.dmd_staked_amount.amount += stake_quantity_dmd.amount;
