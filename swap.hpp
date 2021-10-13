@@ -55,7 +55,7 @@ class [[eosio::contract("swapcontrak")]] swapcontrak:public eosio::contract
 
         eosio::action transfer_action = eosio::action(
             eosio::permission_level(get_self(), "active"_n),
-            eosio::name("eoshubtoke3"), // name of the contract
+            eosio::name("hub.efi"), // name of the contract
             eosio::name("transfer"),
             transfer{from, to, quantity, memo});
             transfer_action.send();
@@ -73,7 +73,7 @@ class [[eosio::contract("swapcontrak")]] swapcontrak:public eosio::contract
 
         eosio::action transfer_action = eosio::action(
             eosio::permission_level(get_self(), "active"_n),
-            eosio::name("dolphintoke2"), // name of the contract
+            eosio::name("dop.efi"), // name of the contract
             eosio::name("transfer"),
             transfer{from, to, quantity, memo});
             transfer_action.send();
@@ -91,7 +91,7 @@ class [[eosio::contract("swapcontrak")]] swapcontrak:public eosio::contract
 
         eosio::action transfer_action = eosio::action(
             eosio::permission_level(get_self(), "active"_n),
-            eosio::name("eosdmdtoken2"), // name of the contract
+            eosio::name("dmd.efi"), // name of the contract
             eosio::name("transfer"),
             transfer{from, to, quantity, memo});
             transfer_action.send();
@@ -100,17 +100,17 @@ class [[eosio::contract("swapcontrak")]] swapcontrak:public eosio::contract
     public:
     using contract::contract;
 
-    void registerswaphub( const name& owner_account, const name& to, const asset& swap_quantity_hub, std::string memo);
-    void registerswapdop( const name& owner_account, const name& to, const asset& swap_quantity_dop, std::string memo);
-    void registerswapdmd( const name& owner_account, const name& to, const asset& swap_quantity_dmd, std::string memo);
-    void sendrewards(swaptable swapped, asset initial_amount, const name& owner_account);
+    void registerswaphub(const name& owner_account, const name& to, const asset& swap_quantity_hub, std::string memo);
+    void registerswapdop(const name& owner_account, const name& to, const asset& swap_quantity_dop, std::string memo);
+    void registerswapdmd(const name& owner_account, const name& to, const asset& swap_quantity_dmd, std::string memo);
 
     [[eosio::action]]
-    void set(const asset& initial_hub, const asset& initial_dop, const asset& initial_dmd, uint8_t initial_bonus, bool initial_locked);
+    void set(const asset& initial_hub, const asset& initial_dop, const asset& initial_dmd, uint8_t initial_bonus);
     [[eosio::action]]
     void setbonus(uint8_t bonus);
+    [[eosio::action]]
+    void setlocked(bool locked);
 
     swapcontrak(name receiver, name code, datastream<const char *> ds):contract(receiver, code, ds), 
                                      hub_symbol("HUB", 4), dop_symbol("DOP", 4), dmd_symbol("DMD", 4){}
 };
-
