@@ -18,14 +18,28 @@ void swapcontrak::setbonus(uint8_t bonus)
     else 
         return;
 }
+
+void stake::setlocked(bool locked)
+{ /* This function lets us set the 'locked' variable true or false for the 31 day staking. */
+    require_auth(get_self());
+
+    totaltable totalswapped(get_self(), "totals"_n.value); 
+    auto total_it = totalswapped.find("totals"_n.value);
+    check(total_it != totalswapped.end(), "error: totals table is not initiated.");
+
+    totalswapped.modify(total_it, get_self(), [&]( auto& row) 
+    {
+        row.locked = locked;
+    });
+}
 /* Setter function that needs to be called after the contract is deployed to initialize the totals table (with 0, preferably, except the bonus, maybe.) */
-void swapcontrak::set(const asset& initial_hub, const asset& initial_dop, const asset& initial_dmd, uint8_t initial_bonus, bool initial_locked)
+void swapcontrak::set(const asset& initial_hub, const asset& initial_dop, const asset& initial_dmd, uint8_t initial_bonus)
 {
     require_auth(get_self());
     totaltable totalswapped(get_self(), "totals"_n.value); 
 
     auto total_it = totalswapped.find("totals"_n.value);
-    if( total_it == totalswapped.end() ) 
+    if(total_it == totalswapped.end())
     {
         totalswapped.emplace( get_self(), [&](auto& row) 
         {
@@ -34,24 +48,7 @@ void swapcontrak::set(const asset& initial_hub, const asset& initial_dop, const 
             row.dmd_total_swapped = initial_dmd;
             row.dop_total_swapped = initial_dop;
             row.bonus             = initial_bonus;
-            row.locked            = initial_locked;
-        });
-    } 
-    else 
-        return;
-}
-
-void stake::setlocked(bool locked)
-{ /* This function lets us set the 'locked' variable true or false for the 31 day staking. */
-    require_auth( get_self() );
-    totaltable totalswapped(get_self(), "totals"_n.value); 
-
-    auto total_it = totalswapped.find("totals"_n.value);
-    if(total_it != totalswapped.end()) 
-    {
-        totalswapped.modify(total_it, get_self(), [&]( auto& row ) 
-        {
-            row.locked = locked;
+            row.locked            = 1; // We'll always set the swap to locked == true when setting the contract.
         });
     } 
     else 
@@ -87,7 +84,7 @@ void swapcontrak::registerswaphub(const name& owner_account, const name& to, con
     auto swapped_it = swapped.find(owner_account.value);
     if(swapped_it == swapped.end()) 
     {
-        swapped.emplace( get_self(), [&](auto& row)
+        swapped.emplace(get_self(), [&](auto& row)
         {
             row.owner_account = owner_account;
             row.hub_swapped_amount = swap_quantity_hub; 
@@ -121,7 +118,7 @@ void swapcontrak::registerswaphub(const name& owner_account, const name& to, con
         asset new_swap_quantity = swap_quantity_hub + (swap_quantity_hub * bonus/100); // Give the appropiate bonus.
         swapcontrak::inline_transferhub(get_self(), owner_account, new_swap_quantity, "Sending rewards with bonus.");
         /* Modify received_amount in the swapped table */
-        swapped.modify(swapped_it, get_self(), [&]( auto& row) 
+        swapped.modify(swapped_it, get_self(), [&](auto& row) 
         {   
             if (row.hub_received_amount.amount == 0)
                 row.hub_received_amount = new_swap_quantity;
@@ -159,7 +156,7 @@ void swapcontrak::registerswapdop(const name& owner_account, const name& to, con
     auto swapped_it = swapped.find(owner_account.value);
     if(swapped_it == swapped.end()) 
     {
-        swapped.emplace( get_self(), [&](auto& row)
+        swapped.emplace(get_self(), [&](auto& row)
         {
             row.owner_account = owner_account;
             row.dop_swapped_amount = swap_quantity_dop; 
@@ -193,7 +190,7 @@ void swapcontrak::registerswapdop(const name& owner_account, const name& to, con
         asset new_swap_quantity = swap_quantity_dop + (swap_quantity_dop * bonus/100); // Give the appropiate bonus.
         swapcontrak::inline_transferdop(get_self(), owner_account, new_swap_quantity, "Sending rewards with bonus.");
         /* Modify received_amount in the swapped table */
-        swapped.modify(swapped_it, get_self(), [&]( auto& row) 
+        swapped.modify(swapped_it, get_self(), [&](auto& row) 
         {   
             if (row.dop_received_amount.amount == 0)
                 row.dop_received_amount = new_swap_quantity;
@@ -231,7 +228,7 @@ void swapcontrak::registerswapdmd(const name& owner_account, const name& to, con
     auto swapped_it = swapped.find(owner_account.value);
     if(swapped_it == swapped.end()) 
     {
-        swapped.emplace( get_self(), [&](auto& row)
+        swapped.emplace(get_self(), [&](auto& row)
         {
             row.owner_account = owner_account;
             row.dmd_swapped_amount = swap_quantity_dmd; 
@@ -265,7 +262,7 @@ void swapcontrak::registerswapdmd(const name& owner_account, const name& to, con
         asset new_swap_quantity = swap_quantity_dmd + (swap_quantity_dmd * bonus/100); // Give the appropiate bonus.
         swapcontrak::inline_transferdmd(get_self(), owner_account, new_swap_quantity, "Sending rewards with bonus.");
         /* Modify received_amount in the swapped table */
-        swapped.modify(swapped_it, get_self(), [&]( auto& row) 
+        swapped.modify(swapped_it, get_self(), [&](auto& row) 
         {   
             if (row.dmd_received_amount.amount == 0)
                 row.dmd_received_amount = new_swap_quantity;
