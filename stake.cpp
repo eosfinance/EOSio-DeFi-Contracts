@@ -38,7 +38,7 @@ void stake::set(const asset& total_staked_hub, const asset& total_staked_dop, co
             row.hub_total_staked      = total_staked_hub;
             row.dop_total_staked      = total_staked_dop;
             row.dmd_total_staked      = total_staked_dmd;
-            /* We'll always set the locked to zero on set(). We have to do two things to initialize the staking */
+            /* We'll always set the locked to zero (false) on set(). We have to do two things to initialize the staking */
             row.locked                = 0; 
             /* How many coins are issued per second (will be multiplied by 1000 to fit the precision) */
             row.hub_issue_frequency   = hub_issue_frequency;
