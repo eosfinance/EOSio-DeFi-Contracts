@@ -36,7 +36,6 @@ class [[eosio::contract("swapcontrak")]] swapcontrak:public eosio::contract
         asset    dmd_total_swapped;
         uint8_t  bonus;
         bool     locked;
-        //uint64_t primary_key()const { return swapped_amount.symbol.code().raw(); }
         uint64_t primary_key()const { return key.value; } 
     };
     
