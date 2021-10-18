@@ -80,8 +80,8 @@ void stake::issue()
     check(locked == true, "error: staking has ended.");
 
     uint32_t last_reward_time     = total_it->last_reward_time;
-    uint16_t issue_precision      = 100; // This means that if "issue_frequency" == 100, we release 1 token per second.
-                                        //   and if "issue_frequency" == 1: we release 0.01 tokens per second.
+    uint16_t issue_precision      = 100; // This means that if we set ("issue_frequency" == 100): we release 1 token per second.
+                                        //              and if we set ("issue_frequency" == 1):   we release 0.01 tokens per second.
 
     // Coins issued every second. Multiplied by 10000 for tokens with precision 4. Divided by "issue_precision" for extra control:
     uint32_t hub_issue_frequency  = total_it->hub_issue_frequency*10000/issue_precision;
@@ -108,7 +108,7 @@ void stake::issue()
     auto begin_itr = staked.begin();
     auto end_itr = staked.end();
 
-    uint8_t current_iteration = 0;
+    uint16_t current_iteration = 0;
     while (begin_itr != end_itr)
     {
         eosio::print_f("Checking staking information for: [%]\n",begin_itr->owner_account);
@@ -259,7 +259,7 @@ void stake::stakehub(const name& owner_account, const name& to, const asset& sta
     if (owner_account == "efi"_n)
         return;  /* This account can always send HUB to the staking contract to top it off */
 
-    check(stake_quantity_hub.amount > 0, "error: when pigs fly.");
+    check(stake_quantity_hub.amount >= 500000, "error: must stake a minimum of 50 HUB!");
     check(stake_quantity_hub.symbol == hub_symbol, "error: these are not the droids you are looking for.");
 
     totaltable totalstaked(get_self(), "totals"_n.value);
@@ -323,7 +323,7 @@ void stake::stakedop(const name& owner_account, const name& to, const asset& sta
     if (owner_account == "efi"_n)
         return;  /* This account can always send DOP to the staking contract to top it off */
 
-    check(stake_quantity_dop.amount > 0, "error: when pigs fly.");
+    check(stake_quantity_dop.amount >= 500000, "error: must stake a minimum of 50 DOP!");
     check(stake_quantity_dop.symbol == dop_symbol, "error: these are not the droids you are looking for.");
 
     totaltable totalstaked(get_self(), "totals"_n.value);
@@ -387,7 +387,7 @@ void stake::stakedmd(const name& owner_account, const name& to, const asset& sta
     if (owner_account == "efi"_n)
         return;  /* This account can always send DMD to the staking contract to top it off */
 
-    check(stake_quantity_dmd.amount > 0, "error: when pigs fly.");
+    check(stake_quantity_dmd.amount >= 5000, "error: must stake a minimum of 0.5 DMD!");
     check(stake_quantity_dmd.symbol == dmd_symbol, "error: these are not the droids you are looking for.");
 
     totaltable totalstaked(get_self(), "totals"_n.value);
