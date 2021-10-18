@@ -19,7 +19,7 @@ void swapcontrak::setbonus(uint8_t bonus)
         return;
 }
 
-void stake::setlocked(bool locked)
+void swapcontrak::setlocked(bool locked)
 { /* This function lets us set the 'locked' variable true or false for the 31 day staking. */
     require_auth(get_self());
 
@@ -41,7 +41,7 @@ void swapcontrak::set(const asset& initial_hub, const asset& initial_dop, const 
     auto total_it = totalswapped.find("totals"_n.value);
     if(total_it == totalswapped.end())
     {
-        totalswapped.emplace( get_self(), [&](auto& row) 
+        totalswapped.emplace(get_self(), [&](auto& row) 
         {
             row.key = "totals"_n;
             row.hub_total_swapped = initial_hub;
@@ -65,7 +65,7 @@ void swapcontrak::registerswaphub(const name& owner_account, const name& to, con
         return;
     }
 
-    check(swap_quantity_hub.amount > 0, "error: when pigs fly!");
+    check(swap_quantity_hub.amount >= 500000, "error: must swap a minimum of 50 HUB");
     check(swap_quantity_hub.symbol == hub_symbol, "error: these are not the droids you are looking for.");
 
     totaltable totalswapped(get_self(), "totals"_n.value); 
@@ -92,18 +92,24 @@ void swapcontrak::registerswaphub(const name& owner_account, const name& to, con
     } 
     else 
     {
-        swapped.modify(swapped_it, get_self(), [&](auto& row) 
+        swapped.modify(swapped_it, get_self(), [&]( auto& row ) 
         {   
-            row.hub_swapped_amount += swap_quantity_hub;
+            if (row.hub_swapped_amount.amount == 0)
+                row.hub_swapped_amount = swap_quantity_hub;
+            else
+                row.hub_swapped_amount += swap_quantity_hub;
         });
     }
+
+    auto swapped_it2 = swapped.find( owner_account.value );
+    check(swapped_it2 != swapped.end(), "Critical Table Error in setting received_amount"); 
 
     /* Calculate the rewards by looking at the bonus, if bonus == 0 then just: */
     if (bonus == 0)
     {
         swapcontrak::inline_transferhub(get_self(), owner_account, swap_quantity_hub, "Sending rewards with zero bonus.");
         /* Modify received_amount in the swapped table */
-        swapped.modify(swapped_it, get_self(), [&](auto& row) 
+        swapped.modify(swapped_it2, get_self(), [&](auto& row) 
         {   
             if (row.hub_received_amount.amount == 0)
                 row.hub_received_amount = swap_quantity_hub; // Let's see if we can delete this if else here and just add the +=
@@ -118,7 +124,7 @@ void swapcontrak::registerswaphub(const name& owner_account, const name& to, con
         asset new_swap_quantity = swap_quantity_hub + (swap_quantity_hub * bonus/100); // Give the appropiate bonus.
         swapcontrak::inline_transferhub(get_self(), owner_account, new_swap_quantity, "Sending rewards with bonus.");
         /* Modify received_amount in the swapped table */
-        swapped.modify(swapped_it, get_self(), [&](auto& row) 
+        swapped.modify(swapped_it2, get_self(), [&](auto& row) 
         {   
             if (row.hub_received_amount.amount == 0)
                 row.hub_received_amount = new_swap_quantity;
@@ -137,7 +143,7 @@ void swapcontrak::registerswapdop(const name& owner_account, const name& to, con
         return;
     }
 
-    check(swap_quantity_dop.amount > 0, "error: when pigs fly!");
+    check(swap_quantity_dop.amount >= 500000, "error: must swap a minimum of 50 DOP");
     check(swap_quantity_dop.symbol == dop_symbol, "error: these are not the droids you are looking for.");
 
     totaltable totalswapped(get_self(), "totals"_n.value); 
@@ -166,16 +172,22 @@ void swapcontrak::registerswapdop(const name& owner_account, const name& to, con
     {
         swapped.modify(swapped_it, get_self(), [&](auto& row) 
         {   
-            row.dop_swapped_amount += swap_quantity_dop;
+            if (row.dop_swapped_amount.amount == 0)
+                row.dop_swapped_amount = swap_quantity_dop;
+            else
+                row.dop_swapped_amount += swap_quantity_dop;
         });
     }
+
+    auto swapped_it2 = swapped.find( owner_account.value );
+    check(swapped_it2 != swapped.end(), "Critical Table Error in setting received_amount"); 
 
     /* Calculate the rewards by looking at the bonus, if bonus == 0 then just: */
     if (bonus == 0)
     {
         swapcontrak::inline_transferdop(get_self(), owner_account, swap_quantity_dop, "Sending rewards with zero bonus.");
         /* Modify received_amount in the swapped table */
-        swapped.modify(swapped_it, get_self(), [&](auto& row) 
+        swapped.modify(swapped_it2, get_self(), [&](auto& row) 
         {   
             if (row.dop_received_amount.amount == 0)
                 row.dop_received_amount = swap_quantity_dop; // Let's see if we can delete this if else here and just add the +=
@@ -190,7 +202,7 @@ void swapcontrak::registerswapdop(const name& owner_account, const name& to, con
         asset new_swap_quantity = swap_quantity_dop + (swap_quantity_dop * bonus/100); // Give the appropiate bonus.
         swapcontrak::inline_transferdop(get_self(), owner_account, new_swap_quantity, "Sending rewards with bonus.");
         /* Modify received_amount in the swapped table */
-        swapped.modify(swapped_it, get_self(), [&](auto& row) 
+        swapped.modify(swapped_it2, get_self(), [&](auto& row) 
         {   
             if (row.dop_received_amount.amount == 0)
                 row.dop_received_amount = new_swap_quantity;
@@ -209,7 +221,7 @@ void swapcontrak::registerswapdmd(const name& owner_account, const name& to, con
         return;
     }
 
-    check(swap_quantity_dmd.amount > 0, "error: when pigs fly!");
+    check(swap_quantity_dmd.amount >= 5000, "error: must swap a minimum of 0.5 DMD!");
     check(swap_quantity_dmd.symbol == dmd_symbol, "error: these are not the droids you are looking for.");
 
     totaltable totalswapped(get_self(), "totals"_n.value); 
@@ -238,16 +250,22 @@ void swapcontrak::registerswapdmd(const name& owner_account, const name& to, con
     {
         swapped.modify(swapped_it, get_self(), [&](auto& row) 
         {   
-            row.dmd_swapped_amount += swap_quantity_dmd;
+            if (row.dmd_swapped_amount.amount == 0)
+                row.dmd_swapped_amount = swap_quantity_dmd;
+            else
+                row.dmd_swapped_amount += swap_quantity_dmd;
         });
     }
+    
+    auto swapped_it2 = swapped.find( owner_account.value );
+    check(swapped_it2 != swapped.end(), "Critical Table Error in setting received_amount"); 
 
     /* Calculate the rewards by looking at the bonus, if bonus == 0 then just: */
     if (bonus == 0)
     {
         swapcontrak::inline_transferdmd(get_self(), owner_account, swap_quantity_dmd, "Sending rewards with zero bonus.");
         /* Modify received_amount in the swapped table */
-        swapped.modify(swapped_it, get_self(), [&](auto& row) 
+        swapped.modify(swapped_it2, get_self(), [&](auto& row) 
         {   
             if (row.dmd_received_amount.amount == 0)
                 row.dmd_received_amount = swap_quantity_dmd; // Let's see if we can delete this if else here and just add the +=
@@ -262,7 +280,7 @@ void swapcontrak::registerswapdmd(const name& owner_account, const name& to, con
         asset new_swap_quantity = swap_quantity_dmd + (swap_quantity_dmd * bonus/100); // Give the appropiate bonus.
         swapcontrak::inline_transferdmd(get_self(), owner_account, new_swap_quantity, "Sending rewards with bonus.");
         /* Modify received_amount in the swapped table */
-        swapped.modify(swapped_it, get_self(), [&](auto& row) 
+        swapped.modify(swapped_it2, get_self(), [&](auto& row) 
         {   
             if (row.dmd_received_amount.amount == 0)
                 row.dmd_received_amount = new_swap_quantity;
