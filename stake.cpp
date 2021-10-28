@@ -80,8 +80,8 @@ void stake::issue()
     check(locked == true, "error: staking has ended.");
 
     uint32_t last_reward_time     = total_it->last_reward_time;
-    uint16_t issue_precision      = 100; // This means that if we set ("issue_frequency" == 100): we release 1 token per second.
-                                        //              and if we set ("issue_frequency" == 1):   we release 0.01 tokens per second.
+    uint16_t issue_precision      = 10000; // This means that if we set ("issue_frequency" == 100): we release 0.01 token per second.
+                                           //          and if we set ("issue_frequency" == 1):   we release 0.0001 tokens per second.
 
     // Coins issued every second. Multiplied by 10000 for tokens with precision 4. Divided by "issue_precision" for extra control:
     uint32_t hub_issue_frequency  = total_it->hub_issue_frequency*10000/issue_precision;
