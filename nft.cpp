@@ -1,21 +1,3 @@
-/* This is the EFi NFT presale minting contract */
-/* This is the simplest of the EFi contracts thus far */
-// Users can send EOS to the NFT contract.
-// The contract must check that not all the NFTs have been reserved (sold out)
-// After that the contract must check how much EOS has been sent
-// If they send too little EOS, refund them (or keep the EOS and ask to send the rest)
-// You could have a scenario where you don't refund anyone at all. You just take EOS and reserve any number of NFTs.
-// If by any chance we sell more than 100, then so be it, we sell out, we raise the number of total NFTs, I mean, they're already bought aren't they?
-// So it just accepts EOS and logs each user in a table and their number of each of the DMD, DOP or HUB NFTs.
-// Maybe we only need to have one table.
-// We need a totals table and a buyers table
-// Totals table just holds the number of NFTs sold for each of the three coins
-// The buyers table will contain information about the order in which the NFTs were bought, and who bought them.
-// The buyers table will log each purchase:
-// order_nr(key) : account_name : amount_dmd : amount_dop : amount_hub
-// So a person can have multiple buys, and multiple NFTs bought in each of these buys, but a single transfer and subsequent purchase will only ever be for a single Coin (DMD or HUB or DOP).
-// A user has to do three separate transfers to get all three NFTs
-// Users will send their EOS to nft.efi with memo "dmd" or "hub" or "dop"
 #include <nft.hpp>
 /*
 This is the EFi V2 NFT Contract.
@@ -69,6 +51,7 @@ void nftcontrak::set()
 [[eosio::on_notify("eosio.token::transfer")]]
 void nftcontrak::registernft(const name& owner_account, const name& to, const asset& amount_eos_sent, std::string memo)
 {
+    check(amount_eos_sent.symbol == eos_symbol, "error: these are not the droids you are looking for.");
     // Checks how much EOS has been sent and what the memo is.
     // Registers the user in the buyers and mints tables. Updates the total table.
     if (to != get_self() || owner_account == get_self())
@@ -85,12 +68,24 @@ void nftcontrak::registernft(const name& owner_account, const name& to, const as
     }
     check(!incorrectmemo,"error: you must specify the correct memo: `hub` or `dop` or `dmd`");
     check(amount_eos_sent.amount >= nft_price, "error: you must send at least 19 EOS to mint a Golden NFT.");
-    check(amount_eos_sent.symbol == eos_symbol, "error: these are not the droids you are looking for.");
 
     totaltable total_minted(get_self(), "totals"_n.value);
     auto total_it = total_minted.find("totals"_n.value);
     check(total_it != total_minted.end(), "error: totals table is not initiated."); 
+    // Here we check to see if the user wants to buy extra NFTs, over the 100 that is allowed.
+    bool overflow = false;
 
+    // Do a check to see if we've already reached over 100.
+    // The only way for a user to buy over the 100 limit, is if the counter is at 95 or something, and they buy more than 5.
+    // In that case, we will just manually refund the users.
+    if ( (memo == "hub" && total_it->hub_total_minted >=100) || 
+           (memo == "dop" && total_it->dop_total_minted >=100) || 
+             (memo == "dmd" && total_it->dmd_total_minted >=100) )
+    {
+        overflow = true;
+    }
+
+    check(!overflow, "error: the maximum number for this NFT has been reached (100 have been minted)");
     // Let's calculate how many NFTs the user has bought at this point, by looking at how much EOS they've sent.
     eosio::print_f("User has sent: [%] EOS \n",amount_eos_sent.amount);
     eosio::print_f("NFT Price: [%]\n",nft_price);
