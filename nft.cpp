@@ -1,8 +1,3 @@
-#include <nft.hpp>
-/*
-This is the EFi V2 NFT Contract.
-*/
-
 void nftcontrak::set()
 {  // We will initiate the three tables here, and then that's basically all we gotta do.
     require_auth(get_self());
@@ -74,13 +69,14 @@ void nftcontrak::registernft(const name& owner_account, const name& to, const as
     check(total_it != total_minted.end(), "error: totals table is not initiated."); 
     // Here we check to see if the user wants to buy extra NFTs, over the 100 that is allowed.
     bool overflow = false;
+    uint16_t limit = 137;
 
-    // Do a check to see if we've already reached over 100.
-    // The only way for a user to buy over the 100 limit, is if the counter is at 95 or something, and they buy more than 5.
+    // Do a check to see if we've already reached over the limit.
+    // The only way for a user to buy over the 137 limit, is if the counter is at 135 or something, and they buy more than 2.
     // In that case, we will just manually refund the users.
-    if ( (memo == "hub" && total_it->hub_total_minted >=100) || 
-           (memo == "dop" && total_it->dop_total_minted >=100) || 
-             (memo == "dmd" && total_it->dmd_total_minted >=100) )
+    if ( (memo == "hub" && total_it->hub_total_minted >=limit) || 
+           (memo == "dop" && total_it->dop_total_minted >=limit) || 
+             (memo == "dmd" && total_it->dmd_total_minted >=limit) )
     {
         overflow = true;
     }
