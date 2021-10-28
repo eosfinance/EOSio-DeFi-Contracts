@@ -1,3 +1,8 @@
+#include <nft.hpp>
+/*
+This is the EFi V2 NFT Contract.
+*/
+
 void nftcontrak::set()
 {  // We will initiate the three tables here, and then that's basically all we gotta do.
     require_auth(get_self());
@@ -81,7 +86,7 @@ void nftcontrak::registernft(const name& owner_account, const name& to, const as
         overflow = true;
     }
 
-    check(!overflow, "error: the maximum number for this NFT has been reached (100 have been minted)");
+    check(!overflow, "error: the maximum number for this NFT has been reached (137 have been minted)");
     // Let's calculate how many NFTs the user has bought at this point, by looking at how much EOS they've sent.
     eosio::print_f("User has sent: [%] EOS \n",amount_eos_sent.amount);
     eosio::print_f("NFT Price: [%]\n",nft_price);
@@ -156,6 +161,6 @@ void nftcontrak::registernft(const name& owner_account, const name& to, const as
     {
         asset refund_asset = amount_eos_sent;
         refund_asset.amount = refund_amount;
-        nftcontrak::inline_transfereos(get_self(), owner_account, refund_asset, "Sending refund from the Golden NFT purchase.");
+        nftcontrak::inline_transfereos(get_self(), owner_account, refund_asset, "Sending refund from the Golden NFT minting.");
     }
 }
