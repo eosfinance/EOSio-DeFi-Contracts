@@ -111,5 +111,5 @@ class [[eosio::contract("swapcontrak")]] swapcontrak:public eosio::contract
     void setlocked(bool locked);
 
     swapcontrak(name receiver, name code, datastream<const char *> ds):contract(receiver, code, ds), 
-                                     hub_symbol("HUB", 4), dop_symbol("DOP", 4), dmd_symbol("DMD", 4){}
+                                     hub_symbol("HUB", 4), dop_symbol("DOP", 8), dmd_symbol("DMD", 10){}
 };
