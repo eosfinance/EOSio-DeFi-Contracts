@@ -1,21 +1,3 @@
-/* This is the EFi NFT presale minting contract */
-/* This is the simplest of the EFi contracts thus far */
-// Users can send EOS to the NFT contract.
-// The contract must check that not all the NFTs have been reserved (sold out)
-// After that the contract must check how much EOS has been sent
-// If they send too little EOS, refund them (or keep the EOS and ask to send the rest)
-// You could have a scenario where you don't refund anyone at all. You just take EOS and reserve any number of NFTs.
-// If by any chance we sell more than 100, then so be it, we sell out, we raise the number of total NFTs, I mean, they're already bought aren't they?
-// So it just accepts EOS and logs each user in a table and their number of each of the DMD, DOP or HUB NFTs.
-// Maybe we only need to have one table.
-// We need a totals table and a buyers table
-// Totals table just holds the number of NFTs sold for each of the three coins
-// The buyers table will contain information about the order in which the NFTs were bought, and who bought them.
-// The buyers table will log each purchase:
-// order_nr(key) : account_name : amount_dmd : amount_dop : amount_hub
-// So a person can have multiple buys, and multiple NFTs bought in each of these buys, but a single transfer and subsequent purchase will only ever be for a single Coin (DMD or HUB or DOP).
-// A user has to do three separate transfers to get all three NFTs
-// Users will send their EOS to nft.efi with memo "dmd" or "hub" or "dop"
 #include <nft.hpp>
 /*
 This is the EFi V2 NFT Contract.
