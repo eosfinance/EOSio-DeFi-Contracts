@@ -226,7 +226,6 @@ void swapcontrak::registerswapdop(const name& owner_account, const name& to, con
             else
                 row.dop_received_amount += new_swap_quantity2;
         });
-        
     }
 }
 
