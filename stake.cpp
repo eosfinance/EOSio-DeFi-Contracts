@@ -87,9 +87,9 @@ void stake::issue()
     uint32_t hub_issue_frequency  = total_it->hub_issue_frequency*10000/issue_precision;
     uint32_t dop_issue_frequency  = total_it->dop_issue_frequency*10000/issue_precision;
     uint32_t dmd_issue_frequency  = total_it->dmd_issue_frequency*10000/issue_precision;
-    uint32_t hub_total_staked     = total_it->hub_total_staked.amount;
-    uint32_t dop_total_staked     = total_it->dop_total_staked.amount;
-    uint32_t dmd_total_staked     = total_it->dmd_total_staked.amount;
+    uint64_t hub_total_staked     = total_it->hub_total_staked.amount;
+    uint64_t dop_total_staked     = total_it->dop_total_staked.amount;
+    uint64_t dmd_total_staked     = total_it->dmd_total_staked.amount;
 
     // How many seconds have passed until now and last_reward_time:
     uint32_t now = current_time_point().sec_since_epoch();
@@ -97,9 +97,9 @@ void stake::issue()
     eosio::print_f("Seconds passed since last issue(): [%] \n",seconds_passed);
 
     // Determine how much total reward should be issued in this period for each of the coins: hub, dmd, dop.
-    uint32_t total_hub_released = seconds_passed * hub_issue_frequency;
-    uint32_t total_dop_released = seconds_passed * dop_issue_frequency;
-    uint32_t total_dmd_released = seconds_passed * dmd_issue_frequency;
+    uint64_t total_hub_released = seconds_passed * hub_issue_frequency;
+    uint64_t total_dop_released = seconds_passed * dop_issue_frequency;
+    uint64_t total_dmd_released = seconds_passed * dmd_issue_frequency;
 
     // We will iterate through the "staketable staked" table, and update each user's unclaimed_amount() field
     // Original iteration code: https://developers.eos.io/manuals/eosio.cdt/v1.8/how-to-guides/key-value-api/kv_table/how-to-iterate-kv-table
