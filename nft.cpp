@@ -1,3 +1,21 @@
+/* This is the EFi NFT presale minting contract */
+/* This is the simplest of the EFi contracts thus far */
+// Users can send EOS to the NFT contract.
+// The contract must check that not all the NFTs have been reserved (sold out)
+// After that the contract must check how much EOS has been sent
+// If they send too little EOS, refund them (or keep the EOS and ask to send the rest)
+// You could have a scenario where you don't refund anyone at all. You just take EOS and reserve any number of NFTs.
+// If by any chance we sell more than 100, then so be it, we sell out, we raise the number of total NFTs, I mean, they're already bought aren't they?
+// So it just accepts EOS and logs each user in a table and their number of each of the DMD, DOP or HUB NFTs.
+// Maybe we only need to have one table.
+// We need a totals table and a buyers table
+// Totals table just holds the number of NFTs sold for each of the three coins
+// The buyers table will contain information about the order in which the NFTs were bought, and who bought them.
+// The buyers table will log each purchase:
+// order_nr(key) : account_name : amount_dmd : amount_dop : amount_hub
+// So a person can have multiple buys, and multiple NFTs bought in each of these buys, but a single transfer and subsequent purchase will only ever be for a single Coin (DMD or HUB or DOP).
+// A user has to do three separate transfers to get all three NFTs
+// Users will send their EOS to nft.efi with memo "dmd" or "hub" or "dop"
 #include <nft.hpp>
 /*
 This is the EFi V2 NFT Contract.
@@ -48,26 +66,43 @@ void nftcontrak::set()
     }
 }
 
+[[eosio::on_notify("atomicassets::logburnasset")]]
+void nftcontrak::nftburn(const name asset_owner, uint64_t asset_id, const name collection_name, const name schema_name, int32_t template_id, 
+    vector <asset> backed_tokens, ATTRIBUTE_MAP old_immutable_data, ATTRIBUTE_MAP old_mutable_data, const name asset_ram_payer)
+{
+    asset dop_refund = asset(3500000, symbol("DOP", 4));   //  350 DOP
+    asset dmd_refund = asset(27000,   symbol("DMD", 4));  //   2.7 DMD
+    asset hub_refund = asset(2000000, symbol("HUB", 4)); //    200 HUB
+
+    // Must check schema_name and collection_name and template_id to determine what we should send to the burner.
+    if ((collection_name == "gluegluetest"_n) && (schema_name == "waterdao4321"_n))
+    {
+        print("We have detected a waterdao4321 burn!");
+        asset refund_asset = asset(10000, symbol("EOS", 4));
+        nftcontrak::inline_transfereos(get_self(), asset_owner, refund_asset, "The market gods are please with this sacrifice!");
+    }
+}
+
 [[eosio::on_notify("eosio.token::transfer")]]
 void nftcontrak::registernft(const name& owner_account, const name& to, const asset& amount_eos_sent, std::string memo)
 {
     check(amount_eos_sent.symbol == eos_symbol, "error: these are not the droids you are looking for.");
     // Checks how much EOS has been sent and what the memo is.
     // Registers the user in the buyers and mints tables. Updates the total table.
-    if (to != get_self() || owner_account == get_self())
+    if (to != get_self() || owner_account == get_self() || owner_account == "efi"_n)
     {
         print("error: these are not the droids you are looking for.");
         return;
     }
 
-    uint64_t nft_price = 190000; // 19 EOS
+    uint64_t nft_price = 270000; // 27 EOS
     bool incorrectmemo = false;
     if ( (memo != "hub") && (memo != "dop") && (memo != "dmd") )
     {
         incorrectmemo = true;
     }
     check(!incorrectmemo,"error: you must specify the correct memo: `hub` or `dop` or `dmd`");
-    check(amount_eos_sent.amount >= nft_price, "error: you must send at least 19 EOS to mint a Golden NFT.");
+    check(amount_eos_sent.amount >= nft_price, "error: you must send at least 27 EOS to mint a Golden NFT.");
 
     totaltable total_minted(get_self(), "totals"_n.value);
     auto total_it = total_minted.find("totals"_n.value);
