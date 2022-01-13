@@ -3,14 +3,15 @@ ScatterJS.plugins( new ScatterEOS() );
 const network = ScatterJS.Network.fromJson({
     blockchain:'eos',
     protocol:'https',
-    host:'api.eossweden.org',
+    host:'eos.greymass.com',
     //host:'eospush.tokenpocket.pro',
     port:443,
     chainId:'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906'
 });
 
+let api;
 const rpc = new eosjs_jsonrpc.default(network.fullhost());
-const api = ScatterJS.eos(network, eosjs_api.default, {rpc});
+//const api = ScatterJS.eos(network, eosjs_api.default, {rpc});
 
 const stake_account = "stake.efi";
 const hubv2_account = "hub.efi";
@@ -18,7 +19,7 @@ const dopv2_account = "dop.efi";
 const dmdv2_account = "dmd.efi";
 
 // Run ScatterJS.Connect
-ScatterJS.scatter.connect('SwapDAPP', {network}).then(connected => 
+ScatterJS.scatter.connect('StakeDAPP', {network}).then(connected => 
 {
     if(!connected) return console.error('no scatter');
         ScatterJS.login().then(id=> 
@@ -29,7 +30,7 @@ ScatterJS.scatter.connect('SwapDAPP', {network}).then(connected =>
 
 window.loginScatter = () =>
 {
-    ScatterJS.scatter.connect('SwapDAPP', {network}).then(connected => 
+    ScatterJS.scatter.connect('StakeDAPP', {network}).then(connected => 
     {
         if(!connected) return console.error('no scatter');
             ScatterJS.login().then(id=> 
@@ -94,7 +95,7 @@ window.maxDOP = () =>
 
 window.stakeHUB = () => 
 { 
-    console.log("fname_hubstakeamount.innerText",fname_hubstakeamount.value);
+    //console.log("fname_hubstakeamount.innerText",fname_hubstakeamount.value);
     if (fname_hubstakeamount.value == "")
     {
         //console.log("fname_hubstakeamount is zero");
@@ -105,7 +106,7 @@ window.stakeHUB = () =>
     stake_quantity = formatTokens(tokens)+" HUB";
 
     //console.log("Stake Quantity has been set to:", stake_quantity);
-
+    api = ScatterJS.eos(network, eosjs_api.default, {rpc});
 
     api.transact({
                     actions:[{
@@ -148,7 +149,7 @@ window.stakeDOP = () =>
     stake_quantity = formatTokens(tokens)+" DOP";
 
     //console.log("Stake Quantity has been set to:", stake_quantity);
-
+    api = ScatterJS.eos(network, eosjs_api.default, {rpc});
 
     api.transact({
                     actions:[{
@@ -191,7 +192,7 @@ window.stakeDMD = () =>
     stake_quantity = formatTokens(tokens)+" DMD";
 
     //console.log("Stake Quantity has been set to:", stake_quantity);
-
+    api = ScatterJS.eos(network, eosjs_api.default, {rpc});
 
     api.transact({
                     actions:[{
@@ -223,6 +224,7 @@ window.stakeDMD = () =>
 
 window.claimDMD = () =>
 {
+    api = ScatterJS.eos(network, eosjs_api.default, {rpc});
     api.transact({
                     actions:[{
                         account: stake_account,
@@ -250,6 +252,7 @@ window.claimDMD = () =>
 
 window.claimHUB = () =>
 {
+    api = ScatterJS.eos(network, eosjs_api.default, {rpc});
     api.transact({
                     actions:[{
                         account: stake_account,
@@ -276,10 +279,39 @@ window.claimHUB = () =>
 
 window.claimDOP = () =>
 {
+    api = ScatterJS.eos(network, eosjs_api.default, {rpc});
     api.transact({
                     actions:[{
                         account: stake_account,
                         name: 'claimdop',
+                        authorization: // user paying for resources must go first
+                        [{
+                            actor: ScatterJS.identity.accounts[0].name,
+                            permission: ScatterJS.identity.accounts[0].authority,
+                        }],
+                        data: 
+                        {
+                            owner_account: ScatterJS.identity.accounts[0].name,
+                        }
+                    }]
+                }, {
+                    blocksBehind: 3,
+                    expireSeconds: 30,
+                }).then(res => {
+                    console.log('sent tx: ', res);
+                }).catch(err => {
+                    alert(err);
+                });
+}
+
+
+window.withdraw = () =>
+{
+    api = ScatterJS.eos(network, eosjs_api.default, {rpc});
+    api.transact({
+                    actions:[{
+                        account: stake_account,
+                        name: 'withdraw',
                         authorization: // user paying for resources must go first
                         [{
                             actor: ScatterJS.identity.accounts[0].name,
@@ -358,6 +390,7 @@ const setStatus = () =>
         total_dop_staked_parent.hidden = true;
         total_dmd_staked_parent.hidden = true;
         total_hub_staked_parent.hidden = true;
+        withdrawcoins.hidden = true;
 
         username.innerText = "No Scatter Detected";
         return;
@@ -385,6 +418,7 @@ const setStatus = () =>
         total_dop_staked_parent.hidden = true;
         total_dmd_staked_parent.hidden = true;
         total_hub_staked_parent.hidden = true;
+        withdrawcoins.hidden = true;
 
         username.innerText = "No identity Detected";
         return;
@@ -404,13 +438,14 @@ const setStatus = () =>
     unclaimed_dmd_readonly.hidden = false;
     unclaimed_hub_readonly.hidden = false;
     unclaimed_dop_readonly.hidden = false;
-    hub_apr_parent.hidden = false;
-    dop_apr_parent.hidden = false;
-    dmd_apr_parent.hidden = false;
+    hub_apr_parent.hidden = true; // Made these hidden after the Staking ended.
+    dop_apr_parent.hidden = true; // Made these hidden after the Staking ended.
+    dmd_apr_parent.hidden = true; // Made these hidden after the Staking ended.
     importantwarning.hidden = false;
     total_dop_staked_parent.hidden = false;
     total_dmd_staked_parent.hidden = false;
     total_hub_staked_parent.hidden = false;
+    withdrawcoins.hidden = false;
 
     username.innerText = "Username: "+ScatterJS.identity.accounts[0].name;
     usefulinfo.innerHTML = "<strong style=\"color:black\">Useful Information ("+ScatterJS.identity.accounts[0].name+")</strong>";
