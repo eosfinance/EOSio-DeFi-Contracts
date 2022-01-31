@@ -60,10 +60,72 @@ class [[eosio::contract("nftcontrak")]] nftcontrak:public eosio::contract
             transfer_action.send();
     }
 
+    void inline_transferhub(eosio::name from, eosio::name to, eosio::asset quantity, std::string memo) const
+    {
+        struct transfer
+        {
+            eosio::name from;
+            eosio::name to;
+            eosio::asset quantity;
+            std::string memo;
+        };
+
+        eosio::action transfer_action = eosio::action(
+            eosio::permission_level(get_self(), "active"_n),
+            eosio::name("hub.efi"), // name of the contract
+            eosio::name("transfer"),
+            transfer{from, to, quantity, memo});
+            transfer_action.send();
+    }
+
+    void inline_transferdop(eosio::name from, eosio::name to, eosio::asset quantity, std::string memo) const
+    {
+        struct transfer
+        {
+            eosio::name from;
+            eosio::name to;
+            eosio::asset quantity;
+            std::string memo;
+        };
+
+        eosio::action transfer_action = eosio::action(
+            eosio::permission_level(get_self(), "active"_n),
+            eosio::name("dop.efi"), // name of the contract
+            eosio::name("transfer"),
+            transfer{from, to, quantity, memo});
+            transfer_action.send();
+    }
+
+    void inline_transferdmd(eosio::name from, eosio::name to, eosio::asset quantity, std::string memo) const
+    {
+        struct transfer
+        {
+            eosio::name from;
+            eosio::name to;
+            eosio::asset quantity;
+            std::string memo;
+        };
+
+        eosio::action transfer_action = eosio::action(
+            eosio::permission_level(get_self(), "active"_n),
+            eosio::name("dmd.efi"), // name of the contract
+            eosio::name("transfer"),
+            transfer{from, to, quantity, memo});
+            transfer_action.send();
+    }
+
     public:
     using contract::contract;
 
+    struct ATTRIBUTE_MAP
+    {
+
+    };
+
     void registernft(const name& owner_account, const name& to, const asset& swap_quantity_hub, std::string memo);
+    void nftburn(const name asset_owner, uint64_t asset_id, const name collection_name, const name schema_name, int32_t template_id, 
+    vector <asset> backed_tokens, ATTRIBUTE_MAP old_immutable_data, ATTRIBUTE_MAP old_mutable_data, const name asset_ram_payer);
+    void nfttransfer(const name collection_name, const name from, const name to, const vector<uint64_t> asset_ids, const std::string memo);
 
     [[eosio::action]]
     void set();
