@@ -48,26 +48,58 @@ void nftcontrak::set()
     }
 }
 
+[[eosio::on_notify("atomicassets::logtransfer")]]
+void nftcontrak::nfttransfer(const name collection_name, const name from, const name to, const vector<uint64_t> asset_ids, const std::string memo)
+{
+    if (from != "nft.efi"_n)
+    {
+        check(to == "nft.efi"_n,"can only transfer NFTs to the nft.efi at the moment");
+    }
+}
+
+// Handles NFT burning to reward users with tokens.
 [[eosio::on_notify("atomicassets::logburnasset")]]
 void nftcontrak::nftburn(const name asset_owner, uint64_t asset_id, const name collection_name, const name schema_name, int32_t template_id, 
     vector <asset> backed_tokens, ATTRIBUTE_MAP old_immutable_data, ATTRIBUTE_MAP old_mutable_data, const name asset_ram_payer)
 {
+    check(false,"NFT Burning is currently suspended while updating the contract. Please come back later.");
     asset dop_refund = asset(3500000, symbol("DOP", 4));   //  350 DOP
     asset dmd_refund = asset(27000,   symbol("DMD", 4));  //   2.7 DMD
     asset hub_refund = asset(2000000, symbol("HUB", 4)); //    200 HUB
 
-    // Must check schema_name and collection_name and template_id to determine what we should send to the burner.
-    if ((collection_name == "gluegluetest"_n) && (schema_name == "waterdao4321"_n))
+    /* DOP */
+    if ((collection_name == "nft.efi"_n) && (schema_name == "golden.dop"_n))
     {
-        print("We have detected a waterdao4321 burn!");
-        asset refund_asset = asset(10000, symbol("EOS", 4));
-        nftcontrak::inline_transfereos(get_self(), asset_owner, refund_asset, "The market gods are please with this sacrifice!");
+        print("We have detected a golden.dop burn!");
+        nftcontrak::inline_transferdop(get_self(), asset_owner, dop_refund, "The market gods are please with this sacrifice!");
+    }
+
+    /* DMD */
+    if ((collection_name == "nft.efi"_n) && (schema_name == "golden.dmd"_n))
+    {
+        print("We have detected a golden.dmd burn!");
+        nftcontrak::inline_transferdmd(get_self(), asset_owner, dmd_refund, "The market gods are please with this sacrifice!");
+    }
+
+    /* HUB */
+    if ((collection_name == "nft.efi"_n) && (schema_name == "golden.hub"_n))
+    {
+        print("We have detected a golden.hub burn!");
+        nftcontrak::inline_transferhub(get_self(), asset_owner, hub_refund, "The market gods are please with this sacrifice!");
     }
 }
 
 [[eosio::on_notify("eosio.token::transfer")]]
 void nftcontrak::registernft(const name& owner_account, const name& to, const asset& amount_eos_sent, std::string memo)
 {
+    if (owner_account != get_self())
+    {
+        if (owner_account == "efi"_n || owner_account == "funds.efi"_n)
+        {
+            return;
+        }
+        //check(false,"NFT Minting is currently suspended while updating the contract. Please come back later.");
+    }
     check(amount_eos_sent.symbol == eos_symbol, "error: these are not the droids you are looking for.");
     // Checks how much EOS has been sent and what the memo is.
     // Registers the user in the buyers and mints tables. Updates the total table.
