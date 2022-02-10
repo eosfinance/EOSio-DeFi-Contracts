@@ -2,7 +2,7 @@
 Defibox LP non-custodial contract:
 */
 
-void efimine::set(uint32_t gluedog_issue_frequency, asset gluedog_total_lptoken, bool locked)
+void efimine::set(uint32_t hub_issue_frequency, uint32_t dop_issue_frequency, uint32_t dmd_issue_frequency , bool locked)
 {
     require_auth(get_self());
 
@@ -18,8 +18,7 @@ void efimine::set(uint32_t gluedog_issue_frequency, asset gluedog_total_lptoken,
         total_lpstats.emplace(get_self(), [&](auto& row) 
         {
             row.key = "totals"_n;
-
-            row.gluedog_total_lptoken = gluedog_total_lptoken;
+            
             row.locked = locked;
 
             row.mining_start_time = now;
