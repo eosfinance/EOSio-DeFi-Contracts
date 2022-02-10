@@ -56,7 +56,6 @@ class [[eosio::contract("efimine")]] efimine:public eosio::contract
     {
         name     key;
 
-        asset    gluedog_total_lptoken;
         bool     locked;
 
         uint32_t mining_start_time;
@@ -66,7 +65,10 @@ class [[eosio::contract("efimine")]] efimine:public eosio::contract
         uint32_t halving4_deadline;
         uint32_t last_reward_time;
 
-        uint32_t gluedog_issue_frequency;
+        uint32_t hub_issue_frequency = hub_issue_frequency;
+        uint32_t dop_issue_frequency = dop_issue_frequency;
+        uint32_t dmd_issue_frequency = dmd_issue_frequency;
+
         uint64_t primary_key()const { return key.value; } 
     };
     typedef eosio::multi_index< "totaltable"_n, total_lpstats > totaltable;
@@ -148,7 +150,7 @@ class [[eosio::contract("efimine")]] efimine:public eosio::contract
     using contract::contract;
 
     [[eosio::action]]
-    void set(const asset& gluedog_total_lptoken, uint32_t gluedog_issue_frequency);
+    void set(uint32_t hub_issue_frequency, uint32_t dop_issue_frequency, uint32_t dmd_issue_frequency , bool locked);
     [[eosio::action]]
     void setlocked(bool locked);
     [[eosio::action]]
