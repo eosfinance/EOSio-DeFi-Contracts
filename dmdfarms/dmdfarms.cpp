@@ -13,7 +13,6 @@ DMD Yeld farms.
 
 */
 
-
 void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, bool locked, uint64_t min_lp_tokens, const& asset asset_symbol, const& string pool_name)
 {
     require_auth(get_self());
@@ -41,9 +40,9 @@ void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, bool lock
             row.last_reward_time = now;
 
             row.dmd_issue_frequency = dmd_issue_frequency;
-            row.minimum_lp_tokens = min_lp_tokens; /* Minimum LP tokens required to earn yield in the pool. */
-            row.asset_symbol = asset_symbol; /* The BOX-LP Tokens used to identify the pair for the pool. */
-            row.pool_name = pool_name; /* String identifying the pool name, for display purposes only */
+            row.minimum_lp_tokens = min_lp_tokens; /* Minimum LP tokens required to earn yield in the pool. Needs to check for this on issue(). */
+            row.asset_symbol = asset_symbol;       /* The BOX-LP Tokens used to identify the pair for the pool. */
+            row.pool_name = pool_name;             /* String identifying the pool name, for display purposes only. */
         });
     }
     else
@@ -71,21 +70,22 @@ void efimine::issue(uint16_t pool_id)
     check(locked == true, "error: The DMD Yield Farms are inactive. Please come back later.");
 
     /* Determine halving handicap */
+    uint8_t mining_rate_handicap;
     uint32_t now = current_time_point().sec_since_epoch();
 
-    if (now < halving1_deadline)
+    if (now < pool_stats->halving1_deadline)
         mining_rate_handicap = 1;
 
-    if (now >= halving1_deadline)
+    if (now >= pool_stats->halving1_deadline)
         mining_rate_handicap = 2;
 
-    if (now >= halving2_deadline)
+    if (now >= pool_stats->halving2_deadline)
         mining_rate_handicap = 4;
 
-    if (now >= halving3_deadline)
+    if (now >= pool_stats->halving3_deadline)
         mining_rate_handicap = 8;
 
-    if (now >= halving4_deadline)
+    if (now >= pool_stats->halving4_deadline)
         mining_rate_handicap = 16;
 
     uint32_t last_reward_time = pool_stats->last_reward_time;
@@ -108,11 +108,11 @@ void efimine::issue(uint16_t pool_id)
     auto current_iteration = registered_accounts.begin();
     auto end_itr = registered_accounts.end();
 
-    uint64_t dmd_total_lptokens = 0;
+    uint64_t pool_total_lptokens = 0; /* Counting the total LP Tokens of everyone currently mining in pool ("pool_id") */
     while (current_iteration != end_itr)
     {
-        dmd_total_lptokens += get_asset_amount(current_iteration->owner_account, dmd_box_lp_symbol).amount;
-
+        pool_total_lptokens += get_asset_amount(current_iteration->owner_account, dmd_box_lp_symbol).amount;
+        /* Need to get SYMBOL from asset. */
         ++current_iteration;
     }
 
@@ -139,34 +139,13 @@ void efimine::issue(uint16_t pool_id)
         /* We'll use this to calculate the user's lp rewards and add to his unclaimed_balance */
         uint64_t dmd_lp_calculation_amount;
 
-        if (hub_current_snapshot > hub_before_snapshot)
-            hub_lp_calculation_amount = hub_before_snapshot;
-        else
-            hub_lp_calculation_amount = hub_current_snapshot;
-
-        if (dop_current_snapshot > dop_before_snapshot)
-            dop_lp_calculation_amount = dop_before_snapshot;
-        else
-            dop_lp_calculation_amount = dop_current_snapshot;
-
         if (dmd_current_snapshot > dmd_before_snapshot)
             dmd_lp_calculation_amount = dmd_before_snapshot;
         else
             dmd_lp_calculation_amount = dmd_current_snapshot;
 
-        uint64_t hub_unclaimed_amount = 0;
-        uint64_t dop_unclaimed_amount = 0;
         uint64_t dmd_unclaimed_amount = 0;
         /* Calculate the user's unclaimed rewards. Then we'll just += the unclaimed_amount */
-        if (row.hub_staked_amount.amount > 0)
-        {
-            float hub_percentage = float(hub_lp_calculation_amount)/float(hub_total_lptokens) * 100; 
-            hub_unclaimed_amount = (hub_percentage*total_hub_released)/0.01/10000;} /* (divided by 10000) for coins with precision 4 */
-                
-        if (row.dop_staked_amount.amount > 0)
-        {
-            float dop_percentage = float(dop_lp_calculation_amount)/float(dop_total_lptokens) * 100; 
-            dop_unclaimed_amount = (dop_percentage*total_dop_released)/0.01/10000;} /* (divided by 10000) for coins with precision 4 */
 
         if (row.dmd_staked_amount.amount > 0)
         {
@@ -177,16 +156,10 @@ void efimine::issue(uint16_t pool_id)
         /* Add the user's unclaimed rewards if necessary */
         registered_accounts.modify(current_iteration, get_self(), [&](auto& row)
         {
-            row.hub_before_lp_amount = hub_previous_snapshot;
-            row.dop_before_lp_amount = dop_previous_snapshot;
             row.dmd_before_lp_amount = dmd_previous_snapshot;
 
-            row.hub_snapshot_lp_amount = hub_current_snapshot;
-            row.dop_snapshot_lp_amount = dop_current_snapshot;
             row.dmd_snapshot_lp_amount = dmd_current_snapshot;
 
-            row.hub_unclaimed_amount += hub_unclaimed_amount;
-            row.dop_unclaimed_amount += dop_unclaimed_amount;
             row.dmd_unclaimed_amount += dmd_unclaimed_amount;
         });
 
@@ -196,30 +169,36 @@ void efimine::issue(uint16_t pool_id)
     // For extra points, have the lpmine contract ask for coins from another account.
 }
 
-void efimine::registeruser(const name& owner_account, uint64_t pool_id)
-{   // User pays for their own RAM to be added to the table
-    // Function should check if the user has a minimum amount of gluedog LP tokens, and if not, they will not be registered.
+void efimine::registeruser(const name& owner_account, uint16_t pool_id)
+{   /* User pays for their own RAM to be added to the table. Users will have to register to each pool separately. */
+    /* Function will check if the user has a minimum amount of LP tokens, and if not, they will not be registered for the pool. */
     require_auth(owner_account);
 
     /* Check that the user has not already registered */
-    lptable registered_accounts(get_self(), get_self().value);
-    auto lprewards_it = registered_accounts.find(owner_account.value);
-    check(lprewards_it == registered_accounts.end(), "error: User has already been registered.");
+    lptable registered_accounts(get_self(), pool_id.value); /* Need to fine-tune this syntax */
+    auto registered_it = registered_accounts.find(owner_account.value); /* Need to fine-tune this syntax */
+    check(registered_it == registered_accounts.end(), "error: User has already been registered for the pool.");
 
     // The minimum amount for each LPToken that the user needs to have in their account to be registered. //
     // These should be configured from the totals table //
-    minimum_dmd_amount = 100;
+    totaltable pool_stats(get_self(), pool_id.value);
+    auto total_it = pool_stats.find(pool_id.value);
+    check(total_it != pool_stats.end(), "error: pool_id not found.");
+    bool locked = pool_stats->locked;
+    check(locked == true, "error: The DMD Yield Farms are inactive. Please come back later.");
 
-    asset dmd_lptokens = get_asset_amount(begin_itr->owner_account, dmd_box_lp_symbol);
+    minimum_dmd_amount = pool_stats->minimum_lp_tokens;
+
+    asset pool_lptokens = get_asset_amount(owner_account, pool_stats->asset_symbol);
 
     bool empty = true;
 
-    if (dmd_lptokens.amount >= minimum_dmd_amount)
+    if (pool_lptokens.amount >= minimum_dmd_amount)
     {
         empty = false;
     }
 
-    check(empty == false, "User does not meet the minumum LP size requirement for HUB, DMD or DOP. Please add more liquidity.");
+    check(empty == false, "User does not meet the minumum LP size requirement for the specific pool. Please add more liquidity.");
     /* Add the user in the table at this point */
     registered_accounts.emplace(get_self(), [&](auto& row)
     {
@@ -227,20 +206,12 @@ void efimine::registeruser(const name& owner_account, uint64_t pool_id)
         /* This is the first time they are added, so most variables are set to zero */
         row.owner_account = owner_account;
 
-        row.hub_snapshot_lp_amount = hub_lptokens.amount;
-        row.dop_snapshot_lp_amount = dop_lptokens.amount;
-        row.dmd_snapshot_lp_amount = dmd_lptokens.amount;
+        row.boxlptoken_snapshot_amount = pool_lptokens.amount;
 
-        row.hub_before_lp_amount = 0;
-        row.dop_before_lp_amount = 0;
-        row.dmd_before_lp_amount = 0;
+        row.boxlptoken_before_amount = 0;
 
-        row.dop_claimed_amount = 0;
-        row.hub_claimed_amount = 0;
         row.dmd_claimed_amount = 0;
 
-        row.dop_unclaimed_amount = 0;
-        row.hub_unclaimed_amount = 0;
         row.dmd_unclaimed_amount = 0;
     });
 }
@@ -256,43 +227,13 @@ void efimine::claimrewards(const name& owner_account)
     check(lprewards_it != registered_accounts.end(), "error: User is not registered. Please register your account first.");
 
     bool empty = true;
-    if ((lprewards_it->dop_unclaimed_amount > 0) || (lprewards_it->hub_unclaimed_amount > 0) || (lprewards_it->dmd_unclaimed_amount > 0))
-    {
+
+    if (lprewards_it->dmd_unclaimed_amount > 0)
         empty = false;
-    }
+
     check(empty == false,"error: No rewards available to claim.")
 
     // Check the registered user table, update the claimed_amount += unclaimed_amount and then unclaimed_amount and send the users their rewards.
-    if (lprewards_it->dop_unclaimed_amount > 0)
-    {
-        asset dop_reward_amount;
-        dop_reward_amount.symbol = dop_symbol;
-        dop_reward_amount.amount = lprewards_it->dop_unclaimed_amount;
-
-        registered_accounts.modify(lprewards_it, get_self(), [&](auto& row)
-        {
-            row.dop_claimed_amount += dop_reward_amount.amount;
-            row.dop_unclaimed_amount = 0;
-        });
-
-        efimine::inline_transferdop(get_self(), owner_account, dop_reward_amount, "I'm LP mining DOP!!!");
-    }
-
-    if (lprewards_it->hub_unclaimed_amount > 0)
-    {
-        asset hub_reward_amount;
-        hub_reward_amount.symbol = hub_symbol;
-        hub_reward_amount.amount = lprewards_it->hub_unclaimed_amount;
-
-        registered_accounts.modify(lprewards_it, get_self(), [&](auto& row)
-        {
-            row.hub_claimed_amount += hub_reward_amount.amount;
-            row.hub_unclaimed_amount = 0;
-        });
-        
-        efimine::inline_transferhub(get_self(), owner_account, hub_reward_amount, "I'm LP mining HUB!!!");
-    }
-
     if (lprewards_it->dmd_unclaimed_amount > 0)
     {
         asset dmd_reward_amount;
