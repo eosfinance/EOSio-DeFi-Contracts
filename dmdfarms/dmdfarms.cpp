@@ -14,25 +14,25 @@ DMD Yeld farms.
 */
 
 
-void efimine::set(uint32_t hub_issue_frequency, uint32_t dop_issue_frequency, uint32_t dmd_issue_frequency, bool locked)
+void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, bool locked, uint64_t min_lp_tokens, const& asset asset_symbol, const& string pool_name)
 {
     require_auth(get_self());
 
-    totaltable total_lpstats(get_self(), "totals"_n.value);
-    auto total_it = total_lpstats.find("totals"_n.value);
+    totaltable pool_stats(get_self(), pool_id.value);
+    auto total_it = pool_stats.find(pool_id.value);
 
     uint32_t now = current_time_point().sec_since_epoch();
     uint32_t seconds_in_a_month = 2629743;
     uint32_t months_between_halvings = 3;
 
-    if(total_it == total_lpstats.end()) 
+    if(total_it == pool_stats.end()) 
     { // Some of these rows will only get modified the first time set() is ran:
-        total_lpstats.emplace(get_self(), [&](auto& row) 
+        pool_stats.emplace(get_self(), [&](auto& row) 
         {
-            row.key = "totals"_n;
+            row.key = pool_id;
             
             row.locked = locked;
-
+            /* We can keep the halvings, and these would be applied separately, to each pool. Not a bad thing to keep. */
             row.mining_start_time = now;
             row.halving1_deadline = now+(1*seconds_in_a_month * months_between_halvings);
             row.halving2_deadline = now+(2*seconds_in_a_month * months_between_halvings);
@@ -40,32 +40,35 @@ void efimine::set(uint32_t hub_issue_frequency, uint32_t dop_issue_frequency, ui
             row.halving4_deadline = now+(4*seconds_in_a_month * months_between_halvings);
             row.last_reward_time = now;
 
-            row.hub_issue_frequency = hub_issue_frequency;
-            row.dop_issue_frequency = dop_issue_frequency;
             row.dmd_issue_frequency = dmd_issue_frequency;
+            row.minimum_lp_tokens = min_lp_tokens; /* Minimum LP tokens required to earn yield in the pool. */
+            row.asset_symbol = asset_symbol; /* The BOX-LP Tokens used to identify the pair for the pool. */
+            row.pool_name = pool_name; /* String identifying the pool name, for display purposes only */
         });
     }
     else
-        total_lpstats.modify(total_it, get_self(),[&]( auto& row) 
+        pool_stats.modify(total_it, get_self(),[&]( auto& row) 
         { // We can always modify these rows with set() at a later date:
             row.locked = locked;
-            row.hub_issue_frequency = hub_issue_frequency;
-            row.dop_issue_frequency = dop_issue_frequency;
+
             row.dmd_issue_frequency = dmd_issue_frequency;
+            row.minimum_lp_tokens = min_lp_tokens;
+            row.asset_symbol = asset_symbol;
+
             row.last_reward_time = now;
         });
 }
 
-void efimine::issue()
-{
+void efimine::issue(uint16_t pool_id)
+{   /* The worker will do an issue for every pool, to help with the batching */
     require_auth( "worker.efi"_n );
 
     /* Mining rate calculations */
-    totaltable total_lpstats(get_self(), "totals"_n.value);
-    auto total_it = total_lpstats.find("totals"_n.value);
-    check(total_it != total_lpstats.end(), "error: totals table is not initiated");
-    bool locked = total_lpstats->locked;
-    check(locked == true, "error: LP mining is currently inactive. Please come back later.");
+    totaltable pool_stats(get_self(), pool_id.value);
+    auto total_it = pool_stats.find(pool_id.value);
+    check(total_it != pool_stats.end(), "error: pool_id not found.");
+    bool locked = pool_stats->locked;
+    check(locked == true, "error: The DMD Yield Farms are inactive. Please come back later.");
 
     /* Determine halving handicap */
     uint32_t now = current_time_point().sec_since_epoch();
@@ -85,22 +88,18 @@ void efimine::issue()
     if (now >= halving4_deadline)
         mining_rate_handicap = 16;
 
-    uint32_t last_reward_time     = total_lpstats->last_reward_time;
-    uint16_t issue_precision      = 10000; // This means that if we set ("issue_frequency" == 100): we release 0.01 token per second.
+    uint32_t last_reward_time = pool_stats->last_reward_time;
+    uint16_t issue_precision  = 10000; // This means that if we set ("issue_frequency" == 100): we release 0.01 token per second.
                                            //          and if we set ("issue_frequency" == 1):   we release 0.0001 tokens per second.
 
-    // Coins issued every second. Multiplied by 10000 for tokens with precision 4. Divided by "issue_precision" for extra control:
-    uint32_t hub_issue_frequency  = total_lpstats->hub_issue_frequency*10000 / issue_precision / mining_rate_handicap;
-    uint32_t dop_issue_frequency  = total_lpstats->dop_issue_frequency*10000 / issue_precision / mining_rate_handicap;
-    uint32_t dmd_issue_frequency  = total_lpstats->dmd_issue_frequency*10000 / issue_precision / mining_rate_handicap;
+    /* How many coins are issued every second. Multiplied by 10000 for tokens with precision 4. Divided by "issue_precision" for extra control */
+    uint32_t dmd_issue_frequency  = pool_stats->dmd_issue_frequency*10000 / issue_precision / mining_rate_handicap;
 
     // How many seconds have passed until now and last_reward_time:
     uint32_t seconds_passed = now - last_reward_time; 
     eosio::print_f("Seconds passed since last issue(): [%] \n",seconds_passed);
 
     // Determine how much total reward should be issued in this period for each of the coins: hub, dmd, dop.
-    uint64_t total_hub_released = seconds_passed * hub_issue_frequency;
-    uint64_t total_dop_released = seconds_passed * dop_issue_frequency;
     uint64_t total_dmd_released = seconds_passed * dmd_issue_frequency;
 
     lptable registered_accounts(get_self(), get_self().value);
@@ -109,21 +108,15 @@ void efimine::issue()
     auto current_iteration = registered_accounts.begin();
     auto end_itr = registered_accounts.end();
 
-    uint64_t dop_total_lptokens = 0;
-    uint64_t hub_total_lptokens = 0;
     uint64_t dmd_total_lptokens = 0;
     while (current_iteration != end_itr)
     {
-        dop_total_lptokens += get_asset_amount(current_iteration->owner_account, dop_box_lp_symbol).amount;
-        hub_total_lptokens += get_asset_amount(current_iteration->owner_account, hub_box_lp_symbol).amount;
         dmd_total_lptokens += get_asset_amount(current_iteration->owner_account, dmd_box_lp_symbol).amount;
 
         ++current_iteration;
     }
 
     eosio::print_f("Finished counting total lptokens for this issue cycle.\n");
-    eosio::print_f("dop_total_lptokens: [%]\n",dop_total_lptokens);
-    eosio::print_f("hub_total_lptokens: [%]\n",hub_total_lptokens);
     eosio::print_f("dmd_total_lptokens: [%]\n",dmd_total_lptokens);
 
     auto current_iteration = registered_accounts.begin();
@@ -135,25 +128,15 @@ void efimine::issue()
         name current_owner = current_iteration->owner_account;
         eosio::print_f("Checking lptoken information for: [%]\n",current_iteration->owner_account);
         /* Check the Defibox LP tables to see how many LPTokens each user has */
-        asset hub_lptokens = get_asset_amount(current_iteration->owner_account, hub_box_lp_symbol);
-        asset dop_lptokens = get_asset_amount(current_iteration->owner_account, dop_box_lp_symbol);
         asset dmd_lptokens = get_asset_amount(current_iteration->owner_account, dmd_box_lp_symbol);
 
-        uint64_t hub_current_snapshot = hub_lptokens.amount;
-        uint64_t dop_current_snapshot = dop_lptokens.amount;
         uint64_t dmd_current_snapshot = dmd_lptokens.amount;
 
-        uint64_t hub_previous_snapshot = current_iteration->hub_snapshot_lp_amount;
-        uint64_t dop_previous_snapshot = current_iteration->dop_snapshot_lp_amount;
         uint64_t dmd_previous_snapshot = current_iteration->dmd_snapshot_lp_amount;
 
-        uint64_t hub_before_snapshot = current_iteration->hub_before_lp_amount;
-        uint64_t dop_before_snapshot = current_iteration->dop_before_lp_amount;
         uint64_t dmd_before_snapshot = current_iteration->dmd_before_lp_amount;
 
         /* We'll use this to calculate the user's lp rewards and add to his unclaimed_balance */
-        uint64_t hub_lp_calculation_amount;
-        uint64_t dop_lp_calculation_amount;
         uint64_t dmd_lp_calculation_amount;
 
         if (hub_current_snapshot > hub_before_snapshot)
@@ -213,7 +196,7 @@ void efimine::issue()
     // For extra points, have the lpmine contract ask for coins from another account.
 }
 
-void efimine::registeruser(const name& owner_account)
+void efimine::registeruser(const name& owner_account, uint64_t pool_id)
 {   // User pays for their own RAM to be added to the table
     // Function should check if the user has a minimum amount of gluedog LP tokens, and if not, they will not be registered.
     require_auth(owner_account);
@@ -225,17 +208,13 @@ void efimine::registeruser(const name& owner_account)
 
     // The minimum amount for each LPToken that the user needs to have in their account to be registered. //
     // These should be configured from the totals table //
-    minimum_dop_amount = 100;
-    minimum_hub_amount = 100; 
     minimum_dmd_amount = 100;
 
-    asset hub_lptokens = get_asset_amount(begin_itr->owner_account, hub_box_lp_symbol);
-    asset dop_lptokens = get_asset_amount(begin_itr->owner_account, dop_box_lp_symbol);
     asset dmd_lptokens = get_asset_amount(begin_itr->owner_account, dmd_box_lp_symbol);
 
     bool empty = true;
 
-    if ((dop_lptokens.amount >= minimum_dop_amount) || (hub_lptokens.amount >= minimum_hub_amount) || (dmd_lptokens.amount >= minimum_dmd_amount))
+    if (dmd_lptokens.amount >= minimum_dmd_amount)
     {
         empty = false;
     }
