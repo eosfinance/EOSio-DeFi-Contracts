@@ -33,32 +33,21 @@ class [[eosio::contract("efimine")]] efimine:public eosio::contract
     {
         name   owner_account;
 
-        uint64_t  hub_snapshot_lp_amount;
-        uint64_t  dop_snapshot_lp_amount;
-        uint64_t  dmd_snapshot_lp_amount;
-
-        uint64_t  hub_before_lp_amount;
-        uint64_t  dop_before_lp_amount;
-        uint64_t  dmd_before_lp_amount;
-
-        uint64_t  dop_claimed_amount;
-        uint64_t  hub_claimed_amount;
-        uint64_t  dmd_claimed_amount;
-
-        uint64_t  dop_unclaimed_amount;
-        uint64_t  hub_unclaimed_amount;
-        uint64_t  dmd_unclaimed_amount;
+        uint64_t boxlptoken_snapshot_amount;
+        uint64_t boxlptoken_before_amount;
+        uint64_t dmd_claimed_amount;
+        uint64_t dmd_unclaimed_amount;
 
         uint64_t primary_key()const { return owner_account.value; }
     };
     typedef eosio::multi_index< "lptable"_n, registered_accounts > lptable;
 
 
-    struct [[eosio::table]] total_lpstats 
+    struct [[eosio::table]] pool_stats 
     {
-        name     key;
-
         bool     locked;
+
+        uint16_t pool_id;
 
         uint32_t mining_start_time;
         uint32_t halving1_deadline;
@@ -71,9 +60,9 @@ class [[eosio::contract("efimine")]] efimine:public eosio::contract
         uint32_t dop_issue_frequency = dop_issue_frequency;
         uint32_t dmd_issue_frequency = dmd_issue_frequency;
 
-        uint64_t primary_key()const { return key.value; } 
+        uint64_t primary_key()const { return pool_id.value; } 
     };
-    typedef eosio::multi_index< "totaltable"_n, total_lpstats > totaltable;
+    typedef eosio::multi_index< "totaltable"_n, pool_stats > totaltable;
 
 
     void inline_transferhub(eosio::name from, eosio::name to, eosio::asset quantity, std::string memo) const
