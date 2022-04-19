@@ -45,7 +45,7 @@ class [[eosio::contract("efimine")]] efimine:public eosio::contract
 
     struct [[eosio::table]] pool_stats 
     {
-        bool     locked;
+        bool     is_active;
 
         uint16_t pool_id;
 
@@ -56,50 +56,16 @@ class [[eosio::contract("efimine")]] efimine:public eosio::contract
         uint32_t halving4_deadline;
         uint32_t last_reward_time;
 
-        uint32_t hub_issue_frequency = hub_issue_frequency;
-        uint32_t dop_issue_frequency = dop_issue_frequency;
+        uint64_t dmd_mine_qty_remaining;
         uint32_t dmd_issue_frequency = dmd_issue_frequency;
+        uint64_t minimum_lp_tokens;
+
+        asset box_asset_symbol;
+        std::string pool_name; /* For display purposes */
 
         uint64_t primary_key()const { return pool_id.value; } 
     };
     typedef eosio::multi_index< "totaltable"_n, pool_stats > totaltable;
-
-
-    void inline_transferhub(eosio::name from, eosio::name to, eosio::asset quantity, std::string memo) const
-    {
-        struct transfer
-        {
-            eosio::name from;
-            eosio::name to;
-            eosio::asset quantity;
-            std::string memo;
-        };
-
-        eosio::action transfer_action = eosio::action(
-            eosio::permission_level(get_self(), "active"_n),
-            eosio::name("hub.efi"), // name of the contract
-            eosio::name("transfer"),
-            transfer{from, to, quantity, memo});
-            transfer_action.send();
-    }
-
-    void inline_transferdop(eosio::name from, eosio::name to, eosio::asset quantity, std::string memo) const
-    {
-        struct transfer
-        {
-            eosio::name from;
-            eosio::name to;
-            eosio::asset quantity;
-            std::string memo;
-        };
-
-        eosio::action transfer_action = eosio::action(
-            eosio::permission_level(get_self(), "active"_n),
-            eosio::name("dop.efi"), // name of the contract
-            eosio::name("transfer"),
-            transfer{from, to, quantity, memo});
-            transfer_action.send();
-    }
 
     void inline_transferdmd(eosio::name from, eosio::name to, eosio::asset quantity, std::string memo) const
     {
