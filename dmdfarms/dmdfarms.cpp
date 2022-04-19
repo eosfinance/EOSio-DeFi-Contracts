@@ -42,6 +42,8 @@ void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, bool is_a
             row.dmd_mine_qty_remaining = dmd_mine_qty_remaining; /* How many DMDs are left to be mined in the pool */
             row.dmd_issue_frequency = dmd_issue_frequency;
             row.minimum_lp_tokens = min_lp_tokens;   /* Minimum LP tokens required to earn yield in the pool. Needs to check for this on issue(). */
+                                                     /* Should set the minimum to be around 100-200 EOS liquidity, because we don't want to get spammed */
+                                                     /* Should implement automatic user unregistering */
             row.box_asset_symbol = box_asset_symbol; /* The BOX-LP Tokens used to identify the pair for the pool. */
             row.pool_name = pool_name;               /* String identifying the pool name, for display purposes only. */
         });
@@ -54,7 +56,7 @@ void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, bool is_a
             row.dmd_issue_frequency = dmd_issue_frequency;
             row.dmd_mine_qty_remaining = dmd_mine_qty_remaining; /* How many DMDs are left to be mined in the pool */
             row.minimum_lp_tokens = min_lp_tokens;
-            row.asset_symbol = asset_symbol;
+            row.box_asset_symbol = box_asset_symbol;
             row.pool_name = pool_name;
 
             row.last_reward_time = now;
@@ -63,7 +65,7 @@ void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, bool is_a
 
 void efimine::issue(uint16_t pool_id) /* Should add an offset here to control batching */
 {   /* The worker will do an issue for each individual pool. */
-    require_auth( "worker.efi"_n );
+    require_auth("worker.efi"_n);
 
     /* Mining rate calculations */
     totaltable pool_stats(get_self(), pool_id.value);
@@ -80,7 +82,6 @@ void efimine::issue(uint16_t pool_id) /* Should add an offset here to control ba
     if (now >= pool_stats->halving3_deadline)  {  mining_rate_handicap = 8;  }
     if (now >= pool_stats->halving4_deadline)  {  mining_rate_handicap = 16; }
 
-    uint32_t last_reward_time = pool_stats->last_reward_time;
     uint16_t issue_precision  = 10000; // With our current algorithm: if we set ("issue_frequency" == 100): we release 0.01 tokens per second.
                                       //    and if we set ("issue_frequency" == 1):   we release 0.0001 tokens per second.
 
@@ -88,7 +89,7 @@ void efimine::issue(uint16_t pool_id) /* Should add an offset here to control ba
     uint32_t augmented_dmd_issue_frequency = pool_stats->dmd_issue_frequency*10000 / issue_precision / mining_rate_handicap;
 
     // How many seconds have passed until now and last_reward_time:
-    uint32_t seconds_passed = now - last_reward_time; 
+    uint32_t seconds_passed = now - pool_stats->last_reward_time; 
     eosio::print_f("Seconds passed since last issue(): [%] \n",seconds_passed);
 
     /* Determine how much total DMD reward should be issued in this transaction/cycle/block */
@@ -199,24 +200,22 @@ void efimine::registeruser(const name& owner_account, uint16_t pool_id)
     });
 }
 
-void efimine::claimrewards(const name& owner_account)
-{   // User calls this function to have their unclaimed_rewards sent to them.
-    // `claimed_rewards += unclaimed_rewards` and `unclaimed_rewards = 0` after a successful claim()
-
+void efimine::claimrewards(const name& owner_account, uint16_t pool_id)
+{   
     require_auth(owner_account);
-    // Check if user is registered. If not, throw error.
-    lptable registered_accounts(get_self(), get_self().value);
+
+    /* Check pool integrity */
+    totaltable pool_stats(get_self(), pool_id.value);
+    auto total_it = pool_stats.find(pool_id.value);
+    check(total_it != pool_stats.end(), "error: Specified mining pool is not valid.");
+
+    /* Check if user is registered and if he has a claimable balance */
+    lptable registered_accounts(get_self(), pool_id.value);
     auto lprewards_it = registered_accounts.find(owner_account.value);
-    check(lprewards_it != registered_accounts.end(), "error: User is not registered. Please register your account first.");
+    check(lprewards_it != registered_accounts.end(), "error: User is not registered.");
+    check(lprewards_it->dmd_unclaimed_amount > 0, "error: No rewards available to claim.");
 
-    bool empty = true;
-
-    if (lprewards_it->dmd_unclaimed_amount > 0)
-        empty = false;
-
-    check(empty == false,"error: No rewards available to claim.")
-
-    // Check the registered user table, update the claimed_amount += unclaimed_amount and then unclaimed_amount and send the users their rewards.
+    /* Check the registered user table, update the claimed_amount and unclaimed_amount */
     if (lprewards_it->dmd_unclaimed_amount > 0)
     {
         asset dmd_reward_amount;
@@ -228,7 +227,10 @@ void efimine::claimrewards(const name& owner_account)
             row.dmd_claimed_amount += dmd_reward_amount.amount;
             row.dmd_unclaimed_amount = 0;
         });
-        
-        efimine::inline_transferdmd(get_self(), owner_account, dmd_reward_amount, "I'm LP mining DMD!!!");
+        /* Send rewards */
+        efimine::inline_transferdmd(get_self(), owner_account, dmd_reward_amount, "I'm LP mining DMD in the Yield Farms !");
+        /* Update the "dmd_remaining" variable for the pools "totaltable" */
+        pool_stats.modify(total_it, get_self(),[&]( auto& row) 
+        {  row.dmd_mine_qty_remaining -= dmd_reward_amount.amount;  });
     }
 }
