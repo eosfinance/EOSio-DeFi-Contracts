@@ -104,7 +104,7 @@ void efimine::issue(uint16_t pool_id) /* Should add an offset here to control ba
     uint64_t pool_total_lptokens = 0; /* Counting the total LP Tokens of everyone currently mining in pool ("pool_id") */
     while (current_iteration != end_itr)
     {
-        pool_total_lptokens += get_asset_amount(current_iteration->owner_account, dmd_box_lp_symbol).amount;
+        pool_total_lptokens += get_asset_amount(current_iteration->owner_account, pool_stats->box_asset_symbol).amount;
         /* Need to get SYMBOL from asset. */
         ++current_iteration;
     }
@@ -121,7 +121,7 @@ void efimine::issue(uint16_t pool_id) /* Should add an offset here to control ba
         name current_owner = current_iteration->owner_account;
         eosio::print_f("Checking lptoken information for: [%]\n",current_iteration->owner_account);
         /* Check the Defibox LP tables to see how many LPTokens each user has */
-        asset dmd_lptokens = get_asset_amount(current_iteration->owner_account, dmd_box_lp_symbol);
+        asset dmd_lptokens = get_asset_amount(current_iteration->owner_account, pool_stats->box_asset_symbol);
 
         uint64_t dmd_current_snapshot  = dmd_lptokens.amount;                       /* Must definitely test this. */
         uint64_t dmd_previous_snapshot = current_iteration->dmd_snapshot_lp_amount; /* Must definitely test this. */
