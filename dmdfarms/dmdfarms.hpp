@@ -8,7 +8,7 @@
 using namespace std;
 using namespace eosio;
 
-class [[eosio::contract("efimine")]] efimine:public eosio::contract 
+class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract 
 {
     private:
     const symbol dop_box_lp_symbol;
@@ -22,9 +22,9 @@ class [[eosio::contract("efimine")]] efimine:public eosio::contract
 
     struct [[eosio::table]] accounts
     {
-        asset    box_lp_tokens;
+        asset    balance;
 
-        uint64_t primary_key()const { return box_lp_tokens.symbol.code().raw(); }
+        uint64_t primary_key()const { return balance.symbol.code().raw(); }
     };
     typedef eosio::multi_index< "boxtable"_n, accounts > boxtable;
 
@@ -63,7 +63,7 @@ class [[eosio::contract("efimine")]] efimine:public eosio::contract
         asset box_asset_symbol;
         std::string pool_name; /* For display purposes */
 
-        uint64_t primary_key()const { return pool_id.value; } 
+        uint64_t primary_key()const { return pool_id; } 
     };
     typedef eosio::multi_index< "totaltable"_n, pool_stats > totaltable;
 
@@ -91,8 +91,8 @@ class [[eosio::contract("efimine")]] efimine:public eosio::contract
         asset lpbalance;
         lpbalance.amount = 0;
 
-        accounts to_acnts( name{"lptoken.defi"}, owner_account.value );
-        for (auto box_it = to_acnts.begin(); box_it != to_acnts.end(); box_it++)
+        boxtable accounts( name{"lptoken.defi"}, owner_account.value );
+        for (auto box_it = accounts.begin(); box_it != accounts.end(); box_it++)
         {
             if((box_it->balance).symbol == lpsymbol)
             {
@@ -107,16 +107,16 @@ class [[eosio::contract("efimine")]] efimine:public eosio::contract
     using contract::contract;
 
     [[eosio::action]]
-    void set(uint32_t hub_issue_frequency, uint32_t dop_issue_frequency, uint32_t dmd_issue_frequency , bool locked);
+    void setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, bool is_active, uint64_t min_lp_tokens, asset box_asset_symbol, string pool_name, uint64_t dmd_mine_qty_remaining);
     [[eosio::action]]
     void setlocked(bool locked);
     [[eosio::action]]
-    void registeruser(const name& owner_account);
+    void registeruser(const name& owner_account, uint16_t pool_id);
     [[eosio::action]]
-    void claimrewards(const name& owner_account);
+    void claimrewards(const name& owner_account, uint16_t pool_id);
     [[eosio::action]]
-    void issue();
+    void issue(uint16_t pool_id);
 
-    efimine(name receiver, name code, datastream<const char *> ds):contract(receiver, code, ds), hub_symbol("HUB", 4), dop_symbol("DOP", 4), dmd_symbol("DMD", 4),
-                                                            hub_box_lp_symbol;("BOXBMZ", 0), dop_box_lp_symbol;("BOXBMY", 0), dmd_box_lp_symbol;("BOXBMU", 0) {}
+    dmdfarms(name receiver, name code, datastream<const char *> ds):contract(receiver, code, ds), hub_symbol("HUB", 4), dop_symbol("DOP", 4), dmd_symbol("DMD", 4),
+                                                            hub_box_lp_symbol("BOXBMZ", 0), dop_box_lp_symbol("BOXBMY", 0), dmd_box_lp_symbol("BOXBMU", 0) {}
 };
