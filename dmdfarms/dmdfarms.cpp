@@ -5,12 +5,7 @@ DMD Yeld farms.
 
 1. DMD Vault where users stake DMD for 3-6-9 months and get DMD rewards.
 
-2. The Farms themselves will require users to register for mining.
-
-3. Not sure if we should have a separate pool for each farm or a single smart contract with multiple tables and multiple settings.
-        We will most likely just have admin settings where we'll configure the pools and variables like BOX-LP token symbol.
-
-4. Don't forget about the NFTs.
+2. The NFTs with +10% bonus.
 
 */
 
@@ -88,7 +83,7 @@ void dmdfarms::issue(uint16_t pool_id) /* Should add an offset here to control b
     /* How many coins are issued every second. Multiplied by 10000 for tokens with precision 4. Divided by "issue_precision" for extra control */
     uint32_t augmented_dmd_issue_frequency = total_it->dmd_issue_frequency*10000 / issue_precision / mining_rate_handicap;
 
-    // How many seconds have passed until now and last_reward_time:
+    /* How many seconds have passed until now and last_reward_time */
     uint32_t seconds_passed = now - total_it->last_reward_time; 
     eosio::print_f("Seconds passed since last issue(): [%] \n",seconds_passed);
 
@@ -104,11 +99,9 @@ void dmdfarms::issue(uint16_t pool_id) /* Should add an offset here to control b
     uint64_t pool_total_lptokens = 0; /* Counting the total LP Tokens of everyone currently mining in pool ("pool_id") */
 
     while (current_iteration != end_itr)
-    {
+    {/* Count everyone's box lptokens */
         pool_total_lptokens += get_asset_amount(current_iteration->owner_account, total_it->box_asset_symbol).amount;
-        /* Need to get SYMBOL from asset. */
-        ++current_iteration;
-    }
+        ++current_iteration; }
 
     eosio::print_f("Finished counting total lptokens for this issue cycle.\n");
     eosio::print_f("pool_total_lptokens: [%]\n",pool_total_lptokens);
@@ -129,7 +122,6 @@ void dmdfarms::issue(uint16_t pool_id) /* Should add an offset here to control b
 
         /* We'll use these to calculate the user's lp rewards and add to his unclaimed_balance */
         uint64_t actual_box_lp_calculation_amount; /* We'll use whatever is lower between current_snapshot and before_snapshot. */
-
         if (boxlptoken_current_snap > current_iteration->boxlptoken_before_amount) { actual_box_lp_calculation_amount = boxlptoken_before_snapshot; }
                                                                              else  { actual_box_lp_calculation_amount = boxlptoken_current_snap; }
 
@@ -139,6 +131,7 @@ void dmdfarms::issue(uint16_t pool_id) /* Should add an offset here to control b
         if (actual_box_lp_calculation_amount > 0)
         {   float dmd_percentage = float(actual_box_lp_calculation_amount)/float(pool_total_lptokens) * 100; 
             dmd_unclaimed_amount = (dmd_percentage*total_dmd_released)/0.01/10000;  } /* (divided by 10000) for coins with precision 4 */
+            /* Here we should see if they have NFTs or not. If they do, we can increase the unclaimed_amount by 5-10% */
 
         /* Modify the table and have before = snapshot and snapshot = current_snapshot */
         /* Add the user's unclaimed rewards if necessary */
@@ -150,10 +143,7 @@ void dmdfarms::issue(uint16_t pool_id) /* Should add an offset here to control b
         });
 
         ++ current_iteration;
-    }
-    // Think about how this will work together with the NFT mechanics.
-    /* The NFTs calculation should be simple. We will check to see if user has or has not got NFT, and we will add a +10% to his farming bonus at the end. */
-    // For extra points, have the lpmine contract ask for coins from another account.
+    } /* The NFTs calculation should be simple. We will check to see if user has or has not got NFT, and we will add a +10% to his farming bonus at the end. */
 }
 
 void dmdfarms::registeruser(const name& owner_account, uint16_t pool_id)
@@ -168,16 +158,11 @@ void dmdfarms::registeruser(const name& owner_account, uint16_t pool_id)
     check(total_it->is_active == true, "error: specified pool is inactive.");
 
     /* Check that the user has not already registered */
-    lptable registered_accounts(get_self(), pool_id); /* Need to fine-tune this syntax */
-    auto registered_it = registered_accounts.find(pool_id); /* Need to fine-tune this syntax */
+    lptable registered_accounts(get_self(), pool_id);
+    auto registered_it = registered_accounts.find(owner_account.value);
     check(registered_it == registered_accounts.end(), "error: User has already been registered for the pool.");
-    /* Check to see if this is the first user registering for the table with the specific pool ID or not, and either modify or emplace */
 
-    /* Probably need to change this syntax and make a loop for all the rows that fall within pool_id scope and see if we can find owner_account */
-
-    // The minimum amount for each LPToken that the user needs to have in their account to be registered. //
-    // These should be configured from the totals table //
-
+    /* Check if user has the minimum amount of lptokens needed */
     asset pool_lptokens = get_asset_amount(owner_account, total_it->box_asset_symbol);
     check(pool_lptokens.amount >= total_it->minimum_lp_tokens, "User does not meet the minumum LP size requirement for the specific pool. Please add more liquidity.");
     /* Add the user in the table at this point */
