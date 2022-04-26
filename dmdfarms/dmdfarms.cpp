@@ -1,11 +1,17 @@
 #include <dmdfarms.hpp>
 /*
 
-DMD Yeld farms.
+The Demond Yeld Farms.
+
+TODO:
 
 1. DMD Vault where users stake DMD for 3-6-9 months and get DMD rewards.
 
 2. The NFTs with +10% bonus.
+
+DONE:
+
+3. Yield Farms. 
 
 */
 
@@ -124,7 +130,6 @@ void dmdfarms::issue(uint16_t pool_id) /* Should add an offset here to control b
         uint64_t actual_box_lp_calculation_amount; /* We'll use whatever is lower between current_snapshot and before_snapshot. */
         if (boxlptoken_current_snap > current_iteration->boxlptoken_before_amount) { actual_box_lp_calculation_amount = boxlptoken_before_snapshot; }
                                                                              else  { actual_box_lp_calculation_amount = boxlptoken_current_snap; }
-
         uint64_t dmd_unclaimed_amount = 0;
         /* Calculate the user's unclaimed rewards and add it to the dmd_unclaimed_amount */
 
