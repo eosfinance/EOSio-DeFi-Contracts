@@ -79,14 +79,14 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
 
         eosio::action transfer_action = eosio::action(
             eosio::permission_level(get_self(), "active"_n),
-            eosio::name("dmd.efi"), // name of the contract
+            eosio::name("dmd.efi"), // name of the contrak
             eosio::name("transfer"),
             transfer{from, to, quantity, memo});
             transfer_action.send();
     }
 
     asset get_asset_amount(name owner_account, asset lptoken)
-    {/* user account name and glue dog LP tokan, amount doesnt matter just put something there to quickly have the symbol */
+    {/* user account name and glue dog LP TOKAN, amount doesnt matter just put something there to quickly have the symbol */
         symbol lpsymbol = lptoken.symbol;
         asset lpbalance;
         lpbalance.amount = 0;
