@@ -57,7 +57,7 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
         uint32_t last_reward_time;
 
         uint64_t dmd_mine_qty_remaining;
-        uint32_t dmd_issue_frequency = dmd_issue_frequency;
+        uint32_t dmd_issue_frequency;
         uint64_t minimum_lp_tokens;
 
         asset box_asset_symbol;
@@ -91,10 +91,10 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
         asset lpbalance;
         lpbalance.amount = 0;
 
-        boxtable accounts( name{"lptoken.defi"}, owner_account.value );
+        boxtable accounts("lptoken.defi"_n, owner_account.value);
         for (auto box_it = accounts.begin(); box_it != accounts.end(); box_it++)
         {
-            if((box_it->balance).symbol == lpsymbol)
+            if(box_it->balance.symbol == lpsymbol)
             {
                   lpbalance = box_it->balance;
                   break;
@@ -108,8 +108,6 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
 
     [[eosio::action]]
     void setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, bool is_active, uint64_t min_lp_tokens, asset box_asset_symbol, string pool_name, uint64_t dmd_mine_qty_remaining);
-    [[eosio::action]]
-    void setlocked(bool locked);
     [[eosio::action]]
     void registeruser(const name& owner_account, uint16_t pool_id);
     [[eosio::action]]
