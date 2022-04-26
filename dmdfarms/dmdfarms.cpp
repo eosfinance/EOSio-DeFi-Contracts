@@ -116,9 +116,9 @@ void dmdfarms::issue(uint16_t pool_id) /* Should add an offset here to control b
         /* Check the Defibox LP tables to see how many LPTokens each user has */
         asset user_box_lptoken = get_asset_amount(current_iteration->owner_account, total_it->box_asset_symbol);
         /* Must definitely test these. */
-        uint64_t boxlptoken_current_snap     = user_box_lptoken.amount;                       /* Current snapshot is what we have in this cycle */
-        uint64_t boxlptoken_previous_snap    = current_iteration->boxlptoken_snapshot_amount; /* This is the user's balance in the previous turn */
-        uint64_t boxlptoken_before_snapshot  = current_iteration->boxlptoken_before_amount;   /* This is the user's balance two turns before current turn */
+        uint64_t boxlptoken_current_snap    = user_box_lptoken.amount;                       /* Current snapshot is what we have in this cycle */
+        uint64_t boxlptoken_previous_snap   = current_iteration->boxlptoken_snapshot_amount; /* This is the user's balance in the previous turn */
+        uint64_t boxlptoken_before_snapshot = current_iteration->boxlptoken_before_amount;   /* This is the user's balance two turns before current turn */
 
         /* We'll use these to calculate the user's lp rewards and add to his unclaimed_balance */
         uint64_t actual_box_lp_calculation_amount; /* We'll use whatever is lower between current_snapshot and before_snapshot. */
@@ -164,9 +164,10 @@ void dmdfarms::registeruser(const name& owner_account, uint16_t pool_id)
 
     /* Check if user has the minimum amount of lptokens needed */
     asset pool_lptokens = get_asset_amount(owner_account, total_it->box_asset_symbol);
+    eosio::print_f("Checking LP Token quantity: [%] for [%]\n",total_it->box_asset_symbol, owner_account.value);
     check(pool_lptokens.amount >= total_it->minimum_lp_tokens, "User does not meet the minumum LP size requirement for the specific pool. Please add more liquidity.");
     /* Add the user in the table at this point */
-    registered_accounts.emplace(get_self(), [&](auto& row)
+    registered_accounts.emplace(owner_account, [&](auto& row)
     {
         /* Here we'll have the `before` and the `snapshot` LP amount counter. */
         /* This is the first time they are added, so most variables are set to zero. */
@@ -200,7 +201,7 @@ void dmdfarms::claimrewards(const name& owner_account, uint16_t pool_id)
         dmd_reward_amount.symbol = dmd_symbol;
         dmd_reward_amount.amount = lprewards_it->dmd_unclaimed_amount;
 
-        registered_accounts.modify(lprewards_it, get_self(), [&](auto& row)
+        registered_accounts.modify(lprewards_it, owner_account, [&](auto& row)
         {
             row.dmd_claimed_amount += dmd_reward_amount.amount;
             row.dmd_unclaimed_amount = 0;
@@ -208,7 +209,19 @@ void dmdfarms::claimrewards(const name& owner_account, uint16_t pool_id)
         /* Send rewards */
         dmdfarms::inline_transferdmd(get_self(), owner_account, dmd_reward_amount, "I'm LP mining DMD in the Yield Farms !");
         /* Update the "dmd_remaining" variable for the pools "totaltable" */
-        pool_stats.modify(total_it, get_self(),[&]( auto& row) 
+        pool_stats.modify(total_it, owner_account,[&]( auto& row) 
         {  row.dmd_mine_qty_remaining -= dmd_reward_amount.amount;  });
+    }
+}
+
+void dmdfarms::clearusers(uint16_t pool_id)
+{
+    require_auth(get_self());
+
+    lptable registered_accounts(get_self(), pool_id);
+    auto itr = registered_accounts.begin();
+    while (itr != registered_accounts.end())
+    {
+        itr = registered_accounts.erase(itr);
     }
 }
