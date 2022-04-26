@@ -114,6 +114,8 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
     void claimrewards(const name& owner_account, uint16_t pool_id);
     [[eosio::action]]
     void issue(uint16_t pool_id);
+    [[eosio::action]]
+    void clearusers(uint16_t pool_id);
 
     dmdfarms(name receiver, name code, datastream<const char *> ds):contract(receiver, code, ds), hub_symbol("HUB", 4), dop_symbol("DOP", 4), dmd_symbol("DMD", 4),
                                                             hub_box_lp_symbol("BOXBMZ", 0), dop_box_lp_symbol("BOXBMY", 0), dmd_box_lp_symbol("BOXBMU", 0) {}
