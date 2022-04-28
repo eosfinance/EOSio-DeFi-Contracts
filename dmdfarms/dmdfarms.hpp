@@ -26,7 +26,7 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
 
         uint64_t primary_key()const { return balance.symbol.code().raw(); }
     };
-    typedef eosio::multi_index< "boxtable"_n, accounts > boxtable;
+    typedef eosio::multi_index< "accounts"_n, accounts > boxtable;
 
 
     struct [[eosio::table]] registered_accounts
@@ -79,7 +79,7 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
 
         eosio::action transfer_action = eosio::action(
             eosio::permission_level(get_self(), "active"_n),
-            eosio::name("dmd.efi"), // name of the contrak
+            eosio::name("dmd.efi"), /* Token Contrak */
             eosio::name("transfer"),
             transfer{from, to, quantity, memo});
             transfer_action.send();
@@ -87,10 +87,8 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
 
     asset get_asset_amount(name owner_account, asset lptoken)
     {   /* Retrieve Defibox LPToken balance for specific account and symbol */
-        symbol lpsymbol = lptoken.symbol;
-
         boxtable accounts("lptoken.defi"_n, owner_account.value);
-        const auto& ac = accounts.find(lpsymbol.raw());
+        auto ac = accounts.find(lptoken.symbol.code().raw());
         return ac->balance;
     }
 
