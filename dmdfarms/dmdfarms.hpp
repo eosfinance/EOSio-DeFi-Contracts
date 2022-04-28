@@ -86,21 +86,12 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
     }
 
     asset get_asset_amount(name owner_account, asset lptoken)
-    {/* user account name and glue dog LP TOKAN, amount doesnt matter just put something there to quickly have the symbol */
+    {   /* Retrieve Defibox LPToken balance for specific account and symbol */
         symbol lpsymbol = lptoken.symbol;
-        asset lpbalance;
-        lpbalance.amount = 0;
 
         boxtable accounts("lptoken.defi"_n, owner_account.value);
-        for (auto box_it = accounts.begin(); box_it != accounts.end(); box_it++)
-        {
-            if(box_it->balance.symbol == lpsymbol)
-            {
-                  lpbalance = box_it->balance;
-                  break;
-            }
-        }
-        return lpbalance;
+        const auto& ac = accounts.find(lpsymbol.raw());
+        return ac->balance;
     }
 
     public:
@@ -116,6 +107,8 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
     void issue(uint16_t pool_id);
     [[eosio::action]]
     void clearusers(uint16_t pool_id);
+    [[eosio::action]]
+    void testboxlp(const name& owner_account);
 
     dmdfarms(name receiver, name code, datastream<const char *> ds):contract(receiver, code, ds), hub_symbol("HUB", 4), dop_symbol("DOP", 4), dmd_symbol("DMD", 4),
                                                             hub_box_lp_symbol("BOXBMZ", 0), dop_box_lp_symbol("BOXBMY", 0), dmd_box_lp_symbol("BOXBMU", 0) {}
