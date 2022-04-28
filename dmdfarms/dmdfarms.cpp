@@ -169,7 +169,8 @@ void dmdfarms::registeruser(const name& owner_account, uint16_t pool_id)
 
     /* Check if user has the minimum amount of lptokens needed */
     asset pool_lptokens = get_asset_amount(owner_account, total_it->box_asset_symbol);
-    eosio::print_f("Checking LP Token quantity: [%] for [%]\n",total_it->box_asset_symbol, owner_account.value);
+    eosio::print_f("Checking LP Token quantity: [%] for [%]\n",total_it->box_asset_symbol, owner_account);
+    eosio::print_f("User has [%] pool_lptokens\n",pool_lptokens);
     check(pool_lptokens.amount >= total_it->minimum_lp_tokens, "User does not meet the minumum LP size requirement for the specific pool. Please add more liquidity.");
     /* Add the user in the table at this point */
     registered_accounts.emplace(owner_account, [&](auto& row)
@@ -220,7 +221,7 @@ void dmdfarms::claimrewards(const name& owner_account, uint16_t pool_id)
 }
 
 void dmdfarms::clearusers(uint16_t pool_id)
-{
+{   /* DEBUG FUNCTION */
     require_auth(get_self());
 
     lptable registered_accounts(get_self(), pool_id);
@@ -229,15 +230,4 @@ void dmdfarms::clearusers(uint16_t pool_id)
     {
         itr = registered_accounts.erase(itr);
     }
-}
-
-void dmdfarms::testboxlp(const name& owner_account)
-{
-    asset box_dmd_lp_symbol;
-    box_dmd_lp_symbol.amount = 0;
-    box_dmd_lp_symbol.symbol = symbol("BOXBMU", 0);
-
-    asset lptokens = get_asset_amount(owner_account, box_dmd_lp_symbol);
-    check(lptokens.amount == 0,"lptokens.amount is NOT zero");
-    check(lptokens.amount > 0,"lptokens.amount is zero");
 }
