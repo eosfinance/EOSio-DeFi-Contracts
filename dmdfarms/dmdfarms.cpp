@@ -230,3 +230,14 @@ void dmdfarms::clearusers(uint16_t pool_id)
         itr = registered_accounts.erase(itr);
     }
 }
+
+void dmdfarms::testboxlp(const name& owner_account)
+{
+    asset box_dmd_lp_symbol;
+    box_dmd_lp_symbol.amount = 0;
+    box_dmd_lp_symbol.symbol = symbol("BOXBMU", 0);
+
+    asset lptokens = get_asset_amount(owner_account, box_dmd_lp_symbol);
+    check(lptokens.amount == 0,"lptokens.amount is NOT zero");
+    check(lptokens.amount > 0,"lptokens.amount is zero");
+}
