@@ -14,12 +14,29 @@ DONE:
 3. Yield Farms. 
 
 */
+void dmdfarms::init()
+{   /* Need to call this first after deploying the contract */
+    require_auth(get_self());
+    globaltable globals(get_self(), "global"_n.value);
+    auto total_it = globals.find("global"_n.value);
+    check(total_it == globals.end(),"error: global already initiated.");
+
+    globals.emplace(get_self(), [&](auto& row) 
+    {
+        row.key = "global"_n;
+        row.last_pool_id = 0;
+    });
+}
 
 void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, bool is_active, uint64_t min_lp_tokens, asset box_asset_symbol, string pool_name, uint64_t dmd_mine_qty_remaining)
 {
     require_auth(get_self());
 
-    totaltable pool_stats(get_self(), pool_id);
+    globaltable globals(get_self(), "global"_n.value);
+    auto global_it = globals.find("global"_n.value);
+    check(global_it != globals.end(),"error: must init global first.");
+
+    pooltable pool_stats(get_self(), pool_id);
     auto total_it = pool_stats.find(pool_id);
 
     uint32_t now = current_time_point().sec_since_epoch();
@@ -27,7 +44,12 @@ void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, bool is_a
     uint32_t months_between_halvings = 3;
 
     if(total_it == pool_stats.end()) 
-    { /* Some of these rows will only get modified the first time setpool() is ran */
+    {   /* Some of these rows will only get modified the first time setpool() is ran */
+        if (pool_id != 0) /* Update last_pool_id on emplace. */
+            check(pool_id == global_it->last_pool_id+1,"error: pool_id must be consecutive.");
+            globals.modify(global_it, get_self(),[&]( auto& row) 
+            {   row.last_pool_id += 1   ;});
+
         pool_stats.emplace(get_self(), [&](auto& row) 
         {
             row.pool_id = pool_id;
@@ -73,7 +95,7 @@ void dmdfarms::issue(uint16_t pool_id) /* Should add an offset here to control b
     require_auth("worker.efi"_n);
 
     /* Mining rate calculations */
-    totaltable pool_stats(get_self(), pool_id);
+    pooltable pool_stats(get_self(), pool_id);
     auto total_it = pool_stats.find(pool_id);
     check(total_it != pool_stats.end(), "error: pool_id not found.");
     check(total_it->is_active == true, "error: specified pool is inactive.");
@@ -118,10 +140,10 @@ void dmdfarms::issue(uint16_t pool_id) /* Should add an offset here to control b
     /* Record the pool_total_lptokens in the pool_id table. */
     pool_stats.modify(total_it, get_self(),[&]( auto& row) 
     {  row.pool_total_lptokens = pool_total_lptokens;  });
-
-    current_iteration = registered_accounts.begin(); /* Reset the counter */
-
-    uint64_t precise_total_dmd_released = 0; /* Recount exactly how much DMD was released this cycle. This will also include the NFT bonus as well */
+    /* Reset the counter */
+    current_iteration = registered_accounts.begin();
+    /* Recount exactly how much DMD was released this cycle. This will also include the NFT bonus as well */
+    uint64_t precise_total_dmd_released = 0; 
     /* Loop again and give every user their proper rewards */
     while (current_iteration != end_itr)
     {
@@ -170,7 +192,7 @@ void dmdfarms::registeruser(const name& owner_account, uint16_t pool_id)
     require_auth(owner_account);
 
     /* Check pool integrity */
-    totaltable pool_stats(get_self(), pool_id);
+    pooltable pool_stats(get_self(), pool_id);
     auto total_it = pool_stats.find(pool_id);
     check(total_it != pool_stats.end(), "error: pool_id not found.");
     check(total_it->is_active == true, "error: specified pool is inactive.");
@@ -203,7 +225,7 @@ void dmdfarms::claimrewards(const name& owner_account, uint16_t pool_id)
     require_auth(owner_account);
 
     /* Check pool integrity */
-    totaltable pool_stats(get_self(), pool_id);
+    pooltable pool_stats(get_self(), pool_id);
     auto total_it = pool_stats.find(pool_id);
     check(total_it != pool_stats.end(), "error: Specified mining pool is not valid.");
 
@@ -229,14 +251,23 @@ void dmdfarms::claimrewards(const name& owner_account, uint16_t pool_id)
         dmdfarms::inline_transferdmd(get_self(), owner_account, dmd_reward_amount, "I'm LP mining DMD in the Yield Farms !");
     }
 }
-
+/* DEBUG FUNCTIONS. Should never be used in production. */
 void dmdfarms::clearusers(uint16_t pool_id)
-{   /* DEBUG FUNCTION */
-    require_auth(get_self());
+{   require_auth(get_self());
 
     lptable registered_accounts(get_self(), pool_id);
     auto itr = registered_accounts.begin();
 
     while (itr != registered_accounts.end())
         itr = registered_accounts.erase(itr);
+}
+
+void dmdfarms::clearpool(uint16_t pool_id)
+{   require_auth(get_self());
+
+    pooltable pool_stats(get_self(), pool_id);
+    auto itr = pool_stats.begin();
+
+    while (itr != pool_stats.end())
+        itr = pool_stats.erase(itr);
 }
