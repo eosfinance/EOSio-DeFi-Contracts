@@ -59,6 +59,7 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
         uint64_t dmd_mine_qty_remaining;
         uint32_t dmd_issue_frequency;
         uint64_t minimum_lp_tokens;
+        uint64_t pool_total_lptokens;
 
         asset box_asset_symbol;
         std::string pool_name; /* For display purposes */
@@ -105,9 +106,7 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
     void issue(uint16_t pool_id);
     [[eosio::action]]
     void clearusers(uint16_t pool_id);
-    [[eosio::action]]
-    void testboxlp(const name& owner_account);
 
-    dmdfarms(name receiver, name code, datastream<const char *> ds):contract(receiver, code, ds), hub_symbol("HUB", 4), dop_symbol("DOP", 4), dmd_symbol("DMD", 4),
-                                                            hub_box_lp_symbol("BOXBMZ", 0), dop_box_lp_symbol("BOXBMY", 0), dmd_box_lp_symbol("BOXBMU", 0) {}
+    dmdfarms(name receiver, name code, datastream<const char *> ds):contract(receiver, code, ds), dmd_symbol("DMD", 4), hub_box_lp_symbol("BOXBMZ", 0), 
+                                                                                        dop_box_lp_symbol("BOXBMY", 0), dmd_box_lp_symbol("BOXBMU", 0) {}
 };
