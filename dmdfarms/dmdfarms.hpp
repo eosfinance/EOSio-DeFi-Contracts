@@ -19,7 +19,15 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
     const symbol hub_symbol;
     const symbol dmd_symbol;
 
+    struct [[eosio::table]] globals 
+    {
+        name     key;
+        uint16_t last_pool_id;
 
+        uint64_t primary_key()const { return key.value; } 
+    };
+    typedef eosio::multi_index< "globaltable"_n, globals  > globaltable;
+ 
     struct [[eosio::table]] accounts
     {
         asset    balance;
@@ -66,7 +74,7 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
 
         uint64_t primary_key()const { return pool_id; } 
     };
-    typedef eosio::multi_index< "totaltable"_n, pool_stats > totaltable;
+    typedef eosio::multi_index< "pooltable"_n, pool_stats > pooltable;
 
     void inline_transferdmd(eosio::name from, eosio::name to, eosio::asset quantity, std::string memo) const
     {
@@ -106,6 +114,10 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
     void issue(uint16_t pool_id);
     [[eosio::action]]
     void clearusers(uint16_t pool_id);
+    [[eosio::action]]
+    void init();
+    [[eosio::action]]
+    void clearpool(uint16_t pool_id);
 
     dmdfarms(name receiver, name code, datastream<const char *> ds):contract(receiver, code, ds), dmd_symbol("DMD", 4), hub_box_lp_symbol("BOXBMZ", 0), 
                                                                                         dop_box_lp_symbol("BOXBMY", 0), dmd_box_lp_symbol("BOXBMU", 0) {}
