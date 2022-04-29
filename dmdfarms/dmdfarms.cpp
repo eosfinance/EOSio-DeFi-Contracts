@@ -47,7 +47,11 @@ void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, bool is_a
                                                      /* Should implement automatic user unregistering */
             row.box_asset_symbol = box_asset_symbol; /* The BOX-LP Tokens used to identify the pair for the pool. */
             row.pool_name = pool_name;               /* String identifying the pool name, for display purposes only. */
+            row.pool_total_lptokens = 0;             /* This is only used to calculate the APR for the display, as our worker counts them every new cycle */
         });
+
+        /* Here we'll need a loop that always recounts all the pools and keeps a last_pool_id variable */
+        /* We should also have a check in place that will not allow you to add non-consecutive pool_ids */
     }
     else
         pool_stats.modify(total_it, get_self(),[&]( auto& row) 
@@ -110,10 +114,14 @@ void dmdfarms::issue(uint16_t pool_id) /* Should add an offset here to control b
         ++current_iteration; }
 
     eosio::print_f("Finished counting total lptokens for this issue cycle.\n");
-    eosio::print_f("pool_total_lptokens: [%]\n",pool_total_lptokens);
+    eosio::print_f("Pool_total_lptokens: [%]\n",pool_total_lptokens);
+    /* Record the pool_total_lptokens in the pool_id table. */
+    pool_stats.modify(total_it, get_self(),[&]( auto& row) 
+    {  row.pool_total_lptokens = pool_total_lptokens;  });
 
     current_iteration = registered_accounts.begin(); /* Reset the counter */
 
+    uint64_t precise_total_dmd_released = 0; /* Recount exactly how much DMD was released this cycle. This will also include the NFT bonus as well */
     /* Loop again and give every user their proper rewards */
     while (current_iteration != end_itr)
     {
@@ -147,8 +155,13 @@ void dmdfarms::issue(uint16_t pool_id) /* Should add an offset here to control b
             row.dmd_unclaimed_amount      += dmd_unclaimed_amount;      /* Must definitely test this. */
         });
 
+        precise_total_dmd_released += dmd_unclaimed_amount;
+
         ++ current_iteration;
     } /* The NFTs calculation should be simple. We will check to see if user has or has not got NFT, and we will add a +10% to his farming bonus at the end. */
+      /* Modify the dmd_mine_qty_remaining row from the pools table. */
+    pool_stats.modify(total_it, get_self(),[&]( auto& row) 
+    {  row.dmd_mine_qty_remaining -= precise_total_dmd_released;  });
 }
 
 void dmdfarms::registeruser(const name& owner_account, uint16_t pool_id)
@@ -214,9 +227,6 @@ void dmdfarms::claimrewards(const name& owner_account, uint16_t pool_id)
         });
         /* Send rewards */
         dmdfarms::inline_transferdmd(get_self(), owner_account, dmd_reward_amount, "I'm LP mining DMD in the Yield Farms !");
-        /* Update the "dmd_remaining" variable for the pools "totaltable" */
-        pool_stats.modify(total_it, owner_account,[&]( auto& row) 
-        {  row.dmd_mine_qty_remaining -= dmd_reward_amount.amount;  });
     }
 }
 
@@ -226,8 +236,7 @@ void dmdfarms::clearusers(uint16_t pool_id)
 
     lptable registered_accounts(get_self(), pool_id);
     auto itr = registered_accounts.begin();
+
     while (itr != registered_accounts.end())
-    {
         itr = registered_accounts.erase(itr);
-    }
 }
