@@ -180,8 +180,8 @@ void dmdfarms::purge(uint16_t pool_id)
 
     /* Check pools integrity */
     lptable registered_accounts(get_self(), pool_id);
-    auto registered_it = registered_accounts.find(pool_id);
-    check(registered_it != registered_accounts.end(), "error: pool_id not found (registered_accounts).");
+    auto lprewards_it = registered_accounts.find(pool_id);
+    check(lprewards_it != registered_accounts.end(), "error: pool_id not found (registered_accounts).");
 
     pooltable pool_stats(get_self(), pool_id);
     auto pool_it = pool_stats.find(pool_id);
@@ -198,6 +198,12 @@ void dmdfarms::purge(uint16_t pool_id)
         if ( (user_box_lptoken.amount == 0) && (current_iteration->boxlptoken_snapshot_amount == 0) && (current_iteration->boxlptoken_before_amount == 0) )
         {
             eosio::print_f("purge(): Detected dead user. Purging [%]\n",current_iteration->owner_account);
+            /* Send the user his unclaimed_reward */
+            asset dmd_reward_amount;
+            dmd_reward_amount.symbol = dmd_symbol;
+            dmd_reward_amount.amount = current_iteration->dmd_unclaimed_amount;
+            dmdfarms::inline_transferdmd(get_self(), current_iteration->owner_account, dmd_reward_amount, "Remaining unclaimed DMD from the Yield Farms. Register again to keep farming.");
+            /* Delete him! */
             current_iteration = registered_accounts.erase(current_iteration);
         }
         ++current_iteration;
