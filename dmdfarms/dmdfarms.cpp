@@ -49,8 +49,8 @@ void dmdfarms::init()
     }
 }
 
-void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, bool is_active, uint64_t min_lp_tokens, asset box_asset_symbol, string pool_name, uint64_t dmd_mine_qty_remaining)
-{
+void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, uint64_t min_lp_tokens, asset box_asset_symbol, string pool_name, uint64_t dmd_mine_qty_remaining)
+{   /* We call after deploying the contract */
     require_auth(get_self());
 
     globaltable globals(get_self(), "global"_n.value);
@@ -59,10 +59,6 @@ void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, bool is_a
 
     pooltable pool_stats(get_self(), pool_id);
     auto pool_it = pool_stats.find(pool_id);
-
-    uint32_t now = current_time_point().sec_since_epoch();
-    uint32_t seconds_in_a_month = 2629743;
-    uint32_t months_between_halvings = 3;
 
     if(pool_it == pool_stats.end()) 
     {   /* Some of these rows will only get modified the first time setpool() is ran */
@@ -76,14 +72,7 @@ void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, bool is_a
         pool_stats.emplace(get_self(), [&](auto& row) 
         {
             row.pool_id = pool_id;
-            row.is_active = is_active;
-            /* Halvings are applied separately to each pool */
-            row.mining_start_time = now;
-            row.halving1_deadline = now+(1*seconds_in_a_month * months_between_halvings);
-            row.halving2_deadline = now+(2*seconds_in_a_month * months_between_halvings);
-            row.halving3_deadline = now+(3*seconds_in_a_month * months_between_halvings);
-            row.halving4_deadline = now+(4*seconds_in_a_month * months_between_halvings);
-            row.last_reward_time = now;
+            row.is_active = false;
 
             row.dmd_mine_qty_remaining = dmd_mine_qty_remaining; /* How many DMDs are left to be mined in the pool */
             row.dmd_issue_frequency = dmd_issue_frequency;
@@ -113,7 +102,46 @@ void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, bool is_a
         });
 }
 
-void dmdfarms::issue(uint16_t pool_id) /* Should add an offset here to control batching */
+void dmdfarms::activatepool(uint16_t pool_id)
+{   /* This will activate the pool and set the mining start time and set halvings */
+    pooltable pool_stats(get_self(), pool_id);
+    auto pool_it = pool_stats.find(pool_id);
+    check(pool_it != pool_stats.end(), "error: pool id not found.");
+
+    uint32_t now = current_time_point().sec_since_epoch();
+    uint32_t seconds_in_a_month = 2629743;
+    uint32_t months_between_halvings = 2;
+
+    pool_stats.modify(pool_it, get_self(),[&]( auto& row) 
+    { /* We can always modify the pools with setpool() at any time */
+        row.is_active = true;
+
+        /* Halvings are applied separately to each pool */
+        row.mining_start_time = now;
+        row.halving1_deadline = now+(1*seconds_in_a_month * months_between_halvings);
+        row.halving2_deadline = now+(2*seconds_in_a_month * months_between_halvings);
+        row.halving3_deadline = now+(3*seconds_in_a_month * months_between_halvings);
+        row.halving4_deadline = now+(4*seconds_in_a_month * months_between_halvings);
+        row.last_reward_time = now;
+    });
+}
+
+void dmdfarms::purge(uint16_t pool_id)
+{   /* Unregister users that are not farming. 
+       The worker will first call issue(pool_id) followed purge(pool_id) and then move to the next pool.  
+       We might actually want to call purge on every pool much less often than issue(). A few times a day. */
+    require_auth("worker.efi"_n);
+
+    /* Check pool integrity */
+    pooltable pool_stats(get_self(), pool_id);
+    auto pool_it = pool_stats.find(pool_id);
+    check(pool_it != pool_stats.end(), "error: pool_id not found.");
+    check(pool_it->is_active == true, "error: specified pool is inactive.");
+
+    /* Check each user and if their snapshot and before_snapshot LP Token amounts are less than the minimum, they will get de-registered. */
+}
+
+void dmdfarms::issue(uint16_t pool_id)
 {   /* The worker will do an issue for each individual pool. */
     require_auth("worker.efi"_n);
 
@@ -254,7 +282,7 @@ void dmdfarms::claimrewards(const name& owner_account, uint16_t pool_id)
     /* Check pool integrity */
     pooltable pool_stats(get_self(), pool_id);
     auto pool_it = pool_stats.find(pool_id);
-    check(pool_it != pool_stats.end(), "error: Specified mining pool is not valid.");
+    check(pool_it != pool_stats.end(), "error: Specified pool_id is not valid.");
 
     /* Check if user is registered and if he has a claimable balance */
     lptable registered_accounts(get_self(), pool_id);
