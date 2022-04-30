@@ -42,6 +42,10 @@ void dmdfarms::init()
                 i++;
                 continue;
             }
+            if (i == 0) 
+                i = 1; /* Overflow check */
+            eosio::print_f("Finished counting the pools: i = [%]\n",i);
+
             globals.modify(global_it, get_self(),[&]( auto& row) 
                 {   row.last_pool_id = i-1   ;});
             break;
@@ -141,7 +145,7 @@ void dmdfarms::activatepool(uint16_t pool_id, bool init_mining_timestamps)
 
     uint32_t now = current_time_point().sec_since_epoch();
     uint32_t seconds_in_a_month = 2629743;
-    uint32_t months_between_halvings = 2;
+    uint32_t months_between_halvings = 1;
 
     pool_stats.modify(pool_it, get_self(),[&]( auto& row) 
     {
@@ -229,8 +233,11 @@ void dmdfarms::issue(uint16_t pool_id)
     if (now >= pool_it->halving3_deadline)  {  mining_rate_handicap = 8;  }
     if (now >= pool_it->halving4_deadline)  {  mining_rate_handicap = 16; }
 
-    uint16_t issue_precision  = 10000; // With our current algorithm: if we set ("issue_frequency" == 100): we release 0.01 tokens per second.
+    uint16_t issue_precision  = 100000; // With our current algorithm: if we set ("issue_frequency" == 100): we release 0.01 tokens per second.
                                       //    and if we set ("issue_frequency" == 1):   we release 0.0001 tokens per second.
+                                /* In order to release 2000 DMD in the first month we should release 0.00076053059 DMD per second */
+                                /* So we should add an extra zero to issue precision and set the mining_frequency to 76 */
+                                /* We can have 5k DMD for each mining pool */
 
     /* How many coins are issued every second. Multiplied by 10000 for tokens with precision 4. Divided by "issue_precision" for extra control */
     uint32_t augmented_dmd_issue_frequency = pool_it->dmd_issue_frequency*10000 / issue_precision / mining_rate_handicap;
@@ -379,7 +386,7 @@ void dmdfarms::claimrewards(const name& owner_account, uint16_t pool_id)
     {
         asset dmd_reward_amount;
         dmd_reward_amount.symbol = dmd_symbol;
-        dmd_reward_amount.amount = lprewards_it->dmd_unclaimed_amount;
+        dmd_reward_amount.amount = lprewards_it->dmd_unclaimed_amount/10000; /* We must divide by 10k for coins with precision 4 */
 
         registered_accounts.modify(lprewards_it, owner_account, [&](auto& row)
         {
@@ -397,12 +404,11 @@ void dmdfarms::dellastpool()
     globaltable globals(get_self(), "global"_n.value);
     auto global_it = globals.find("global"_n.value);
     check(global_it != globals.end(),"error: must init global first.");
+    check(global_it->last_pool_id != 0,"error: no pool to delete.");
 
     pooltable pool_stats(get_self(), global_it->last_pool_id);
-    auto itr = pool_stats.begin();
-
-    while (itr != pool_stats.end())
-        itr = pool_stats.erase(itr);
+    auto itr = pool_stats.find(global_it->last_pool_id);
+    pool_stats.erase(itr);
 
     globals.modify(global_it, get_self(),[&]( auto& row) 
             {   row.last_pool_id -= 1   ;});
