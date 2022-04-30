@@ -96,7 +96,7 @@ void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, uint64_t 
         });
 }
 
-void dmdfarms::set_issuefrequency(uint16_t pool_id, uint32_t dmd_issue_frequency)
+void dmdfarms::setissuefreq(uint16_t pool_id, uint32_t dmd_issue_frequency)
 {   require_auth(get_self());
 
     pooltable pool_stats(get_self(), pool_id);
@@ -107,7 +107,7 @@ void dmdfarms::set_issuefrequency(uint16_t pool_id, uint32_t dmd_issue_frequency
     {   row.dmd_issue_frequency = dmd_issue_frequency; });
 }
 
-void dmdfarms::set_minpltokens(uint16_t pool_id, uint64_t min_lp_tokens)
+void dmdfarms::setminlptoke(uint16_t pool_id, uint64_t min_lp_tokens)
 {   require_auth(get_self());
 
     pooltable pool_stats(get_self(), pool_id);
@@ -118,7 +118,7 @@ void dmdfarms::set_minpltokens(uint16_t pool_id, uint64_t min_lp_tokens)
     {   row.minimum_lp_tokens = min_lp_tokens; });
 }
 
-void dmdfarms::set_lastrewardtime(uint16_t pool_id)
+void dmdfarms::setlastrewrd(uint16_t pool_id)
 {   require_auth(get_self());
 
     pooltable pool_stats(get_self(), pool_id);
@@ -159,7 +159,7 @@ void dmdfarms::activatepool(uint16_t pool_id, bool init_mining_timestamps)
     });
 }
 
-void dmdfarms::deactivatepool(uint16_t pool_id)
+void dmdfarms::closepool(uint16_t pool_id)
 {
     require_auth(get_self());
 
