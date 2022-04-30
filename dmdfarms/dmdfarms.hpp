@@ -105,6 +105,8 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
     using contract::contract;
 
     [[eosio::action]]
+    void init();
+    [[eosio::action]]
     void setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, bool is_active, uint64_t min_lp_tokens, asset box_asset_symbol, string pool_name, uint64_t dmd_mine_qty_remaining);
     [[eosio::action]]
     void registeruser(const name& owner_account, uint16_t pool_id);
@@ -115,9 +117,9 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
     [[eosio::action]]
     void clearusers(uint16_t pool_id);
     [[eosio::action]]
-    void init();
-    [[eosio::action]]
     void clearpool(uint16_t pool_id);
+    [[eosio::action]]
+    void dellastpool();
 
     dmdfarms(name receiver, name code, datastream<const char *> ds):contract(receiver, code, ds), dmd_symbol("DMD", 4), hub_box_lp_symbol("BOXBMZ", 0), 
                                                                                         dop_box_lp_symbol("BOXBMY", 0), dmd_box_lp_symbol("BOXBMU", 0) {}
