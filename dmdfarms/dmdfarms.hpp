@@ -119,9 +119,9 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
     [[eosio::action]]
     void dellastpool();
     [[eosio::action]]
-    void clearusers(uint16_t pool_id);
+    void delusers(uint16_t pool_id);
     [[eosio::action]]
-    void clearpool(uint16_t pool_id);
+    void delpool(uint16_t pool_id);
     [[eosio::action]]
     void setminlptoke(uint16_t pool_id, uint64_t min_lp_tokens);
     [[eosio::action]]
@@ -131,7 +131,7 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
     [[eosio::action]]
     void setissuefreq(uint16_t pool_id, uint32_t dmd_issue_frequency);
     [[eosio::action]]
-    void closepool(uint16_t pool_id);
+    void deactivpool(uint16_t pool_id);
 
     dmdfarms(name receiver, name code, datastream<const char *> ds):contract(receiver, code, ds), dmd_symbol("DMD", 4), hub_box_lp_symbol("BOXBMZ", 0), 
                                                                                         dop_box_lp_symbol("BOXBMY", 0), dmd_box_lp_symbol("BOXBMU", 0) {}
