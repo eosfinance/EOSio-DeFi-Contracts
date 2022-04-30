@@ -209,7 +209,8 @@ void dmdfarms::issue(uint16_t pool_id) /* Should add an offset here to control b
     }/* The NFTs calculation should be simple. We will check to see if user has or has not got NFT, and we will add a +10% to his farming bonus at the end. */
     /* Modify the dmd_mine_qty_remaining row from the pools table. */
     pool_stats.modify(pool_it, get_self(),[&]( auto& row) 
-    {  row.dmd_mine_qty_remaining -= precise_total_dmd_released;  });
+    {  row.dmd_mine_qty_remaining -= precise_total_dmd_released;
+       row.last_reward_time = now;  });
 }
 
 void dmdfarms::registeruser(const name& owner_account, uint16_t pool_id)
