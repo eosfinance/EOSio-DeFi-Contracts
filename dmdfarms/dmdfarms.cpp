@@ -173,18 +173,35 @@ void dmdfarms::deactivpool(uint16_t pool_id)
 }
 
 void dmdfarms::purge(uint16_t pool_id)
-{   /* Unregister users that are not farming. 
+{   /* Unregister users that are not farming (have not had any LP tokens for three consecutive turns).
        The worker will first call issue(pool_id) followed purge(pool_id) and then move to the next pool.  
-       We might actually want to call purge on every pool much less often than issue(). A few times a day. */
+       We might actually want to call purge on every pool much less often than issue(). Once every hour should be fine. */
     require_auth("worker.efi"_n);
 
-    /* Check pool integrity */
+    /* Check pools integrity */
+    lptable registered_accounts(get_self(), pool_id);
+    auto registered_it = registered_accounts.find(pool_id);
+    check(registered_it != registered_accounts.end(), "error: pool_id not found (registered_accounts).");
+
     pooltable pool_stats(get_self(), pool_id);
     auto pool_it = pool_stats.find(pool_id);
-    check(pool_it != pool_stats.end(), "error: pool_id not found.");
-    check(pool_it->is_active == true, "error: specified pool is inactive.");
+    check(pool_it != pool_stats.end(), "error: pool_id not found (pool_stats).");
 
     /* Check each user and if their snapshot and before_snapshot LP Token amounts are less than the minimum, they will get de-registered. */
+    auto current_iteration = registered_accounts.begin();
+    auto end_itr = registered_accounts.end();
+
+    while (current_iteration != end_itr)
+    {
+        eosio::print_f("purge(): Checking lptoken information for: [%]\n",current_iteration->owner_account);
+        asset user_box_lptoken = get_asset_amount(current_iteration->owner_account, pool_it->box_asset_symbol);
+        if ( (user_box_lptoken.amount == 0) && (current_iteration->boxlptoken_snapshot_amount == 0) && (current_iteration->boxlptoken_before_amount == 0) )
+        {
+            eosio::print_f("purge(): Detected dead user. Purging [%]\n",current_iteration->owner_account);
+            current_iteration = registered_accounts.erase(current_iteration);
+        }
+        ++current_iteration;
+    }
 }
 
 void dmdfarms::issue(uint16_t pool_id)
@@ -246,6 +263,7 @@ void dmdfarms::issue(uint16_t pool_id)
     /* Record the pool_total_lptokens in the pool_id table. */
     pool_stats.modify(pool_it, get_self(),[&]( auto& row) 
     {  row.pool_total_lptokens = pool_total_lptokens;  });
+    check(pool_total_lptokens != 0, "error: nothing to issue, pool_total_lptokens is zero.");
     /* Reset the counter */
     current_iteration = registered_accounts.begin();
     /* Recount exactly how much DMD was released this cycle. This will also include the NFT bonus as well */
@@ -254,7 +272,6 @@ void dmdfarms::issue(uint16_t pool_id)
     /* Loop again and give every user their proper rewards */
     while (current_iteration != end_itr)
     {
-        name current_owner = current_iteration->owner_account;
         eosio::print_f("Checking lptoken information for: [%]\n",current_iteration->owner_account);
         /* Check the Defibox LP tables to see how many LPTokens each user has */
         asset user_box_lptoken = get_asset_amount(current_iteration->owner_account, pool_it->box_asset_symbol);
