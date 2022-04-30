@@ -159,7 +159,7 @@ void dmdfarms::activatepool(uint16_t pool_id, bool init_mining_timestamps)
     });
 }
 
-void dmdfarms::closepool(uint16_t pool_id)
+void dmdfarms::deactivpool(uint16_t pool_id)
 {
     require_auth(get_self());
 
@@ -371,7 +371,7 @@ void dmdfarms::dellastpool()
 }
 
 /* DEBUG FUNCTIONS. Should never be used in production. */
-void dmdfarms::clearusers(uint16_t pool_id)
+void dmdfarms::delusers(uint16_t pool_id)
 {   require_auth(get_self());
 
     lptable registered_accounts(get_self(), pool_id);
@@ -381,7 +381,7 @@ void dmdfarms::clearusers(uint16_t pool_id)
         itr = registered_accounts.erase(itr);
 }
 
-void dmdfarms::clearpool(uint16_t pool_id)
+void dmdfarms::delpool(uint16_t pool_id)
 {   require_auth(get_self());
 
     pooltable pool_stats(get_self(), pool_id);
