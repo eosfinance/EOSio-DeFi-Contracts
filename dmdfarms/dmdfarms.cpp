@@ -89,41 +89,87 @@ void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, uint64_t 
     }
     else
         pool_stats.modify(pool_it, get_self(),[&]( auto& row) 
-        { /* We can always modify the pools with setpool() at any time */
-            row.is_active = is_active;
-
-            row.dmd_issue_frequency = dmd_issue_frequency;
+        { /* Only these rows will be modified on setpool if the pool_id already exists. */
             row.dmd_mine_qty_remaining = dmd_mine_qty_remaining; /* How many DMDs are left to be mined in the pool */
-            row.minimum_lp_tokens = min_lp_tokens;
             row.box_asset_symbol = box_asset_symbol;
             row.pool_name = pool_name;
-
-            row.last_reward_time = now;
         });
 }
 
-void dmdfarms::activatepool(uint16_t pool_id)
-{   /* This will activate the pool and set the mining start time and set halvings */
+void dmdfarms::set_issuefrequency(uint16_t pool_id, uint32_t dmd_issue_frequency)
+{   require_auth(get_self());
+
     pooltable pool_stats(get_self(), pool_id);
     auto pool_it = pool_stats.find(pool_id);
-    check(pool_it != pool_stats.end(), "error: pool id not found.");
+    check(pool_it != pool_stats.end(), "error: pool_id not found.");
+
+    pool_stats.emplace(get_self(), [&](auto& row) 
+    {   row.dmd_issue_frequency = dmd_issue_frequency; });
+}
+
+void dmdfarms::set_minpltokens(uint16_t pool_id, uint64_t min_lp_tokens)
+{   require_auth(get_self());
+
+    pooltable pool_stats(get_self(), pool_id);
+    auto pool_it = pool_stats.find(pool_id);
+    check(pool_it != pool_stats.end(), "error: pool_id not found.");
+
+    pool_stats.emplace(get_self(), [&](auto& row) 
+    {   row.minimum_lp_tokens = min_lp_tokens; });
+}
+
+void dmdfarms::set_lastrewardtime(uint16_t pool_id)
+{   require_auth(get_self());
+
+    pooltable pool_stats(get_self(), pool_id);
+    auto pool_it = pool_stats.find(pool_id);
+    check(pool_it != pool_stats.end(), "error: pool_id not found.");
+
+    uint32_t now = current_time_point().sec_since_epoch();
+    pool_stats.emplace(get_self(), [&](auto& row) 
+    {   row.last_reward_time = now; });
+}
+
+void dmdfarms::activatepool(uint16_t pool_id, bool init_mining_timestamps)
+{   /* This will activate the pool and set the mining start time and set halvings */
+    require_auth(get_self());
+
+    pooltable pool_stats(get_self(), pool_id);
+    auto pool_it = pool_stats.find(pool_id);
+    check(pool_it != pool_stats.end(), "error: pool_id not found.");
+    check(pool_it->is_active == false, "error: pool has already been activated.");
 
     uint32_t now = current_time_point().sec_since_epoch();
     uint32_t seconds_in_a_month = 2629743;
     uint32_t months_between_halvings = 2;
 
     pool_stats.modify(pool_it, get_self(),[&]( auto& row) 
-    { /* We can always modify the pools with setpool() at any time */
+    {
         row.is_active = true;
-
         /* Halvings are applied separately to each pool */
-        row.mining_start_time = now;
-        row.halving1_deadline = now+(1*seconds_in_a_month * months_between_halvings);
-        row.halving2_deadline = now+(2*seconds_in_a_month * months_between_halvings);
-        row.halving3_deadline = now+(3*seconds_in_a_month * months_between_halvings);
-        row.halving4_deadline = now+(4*seconds_in_a_month * months_between_halvings);
-        row.last_reward_time = now;
+        if (init_mining_timestamps)
+        {   /* Extra option that can reset our mining timestamps */
+            row.mining_start_time = now;
+            row.halving1_deadline = now+(1*seconds_in_a_month * months_between_halvings);
+            row.halving2_deadline = now+(2*seconds_in_a_month * months_between_halvings);
+            row.halving3_deadline = now+(3*seconds_in_a_month * months_between_halvings);
+            row.halving4_deadline = now+(4*seconds_in_a_month * months_between_halvings);
+            row.last_reward_time = now;
+        }
     });
+}
+
+void dmdfarms::deactivatepool(uint16_t pool_id)
+{
+    require_auth(get_self());
+
+    pooltable pool_stats(get_self(), pool_id);
+    auto pool_it = pool_stats.find(pool_id);
+    check(pool_it != pool_stats.end(), "error: pool_id not found.");
+    check(pool_it->is_active == true, "error: pool is already inactive.");
+
+    pool_stats.modify(pool_it, get_self(),[&]( auto& row) 
+    {   row.is_active = false   ;});
 }
 
 void dmdfarms::purge(uint16_t pool_id)
