@@ -107,7 +107,7 @@ void dmdfarms::setissuefreq(uint16_t pool_id, uint32_t dmd_issue_frequency)
     auto pool_it = pool_stats.find(pool_id);
     check(pool_it != pool_stats.end(), "error: pool_id not found.");
 
-    pool_stats.emplace(get_self(), [&](auto& row) 
+    pool_stats.modify(pool_it, get_self(),[&]( auto& row) 
     {   row.dmd_issue_frequency = dmd_issue_frequency; });
 }
 
@@ -118,7 +118,7 @@ void dmdfarms::setminlptoke(uint16_t pool_id, uint64_t min_lp_tokens)
     auto pool_it = pool_stats.find(pool_id);
     check(pool_it != pool_stats.end(), "error: pool_id not found.");
 
-    pool_stats.emplace(get_self(), [&](auto& row) 
+    pool_stats.modify(pool_it, get_self(),[&]( auto& row) 
     {   row.minimum_lp_tokens = min_lp_tokens; });
 }
 
@@ -130,7 +130,7 @@ void dmdfarms::setlastrewrd(uint16_t pool_id)
     check(pool_it != pool_stats.end(), "error: pool_id not found.");
 
     uint32_t now = current_time_point().sec_since_epoch();
-    pool_stats.emplace(get_self(), [&](auto& row) 
+    pool_stats.modify(pool_it, get_self(),[&]( auto& row) 
     {   row.last_reward_time = now; });
 }
 
