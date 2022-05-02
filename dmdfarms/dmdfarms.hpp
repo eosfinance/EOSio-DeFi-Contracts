@@ -96,9 +96,15 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
 
     asset get_asset_amount(name owner_account, asset lptoken)
     {   /* Retrieve Defibox LPToken balance for specific account and symbol */
+        asset user_balance = lptoken; user_balance.amount = 0;
+
         boxtable accounts("lptoken.defi"_n, owner_account.value);
         auto ac = accounts.find(lptoken.symbol.code().raw());
-        return ac->balance;
+
+        if (ac != accounts.end())
+            user_balance = ac->balance;
+
+        return user_balance;
     }
 
     public:
