@@ -3,10 +3,8 @@
 
 The Demond Yeld Farms.
 
-TODO:
-
-Should have setpool set the pools always with "is_active = 0". 
-And then we have another function: activatepool(), and when that is called, the halvings and mining start time are also automatically set.
+Setpool sets the pools with "is_active = 0". 
+Then we have another function: activatepool(), and when that is called, the halvings and mining start time can also be set.
 
 1. DMD Vault where users stake DMD for 3-6-9 months and get DMD rewards.
 
@@ -19,6 +17,7 @@ DONE:
 */
 void dmdfarms::init()
 {   /* Need to call this first after deploying the contract. This function will set "last_pool_id". */
+    /* When called again it will set last_pool_id automatically based on how many consecutive pools are detected in the tables. */
     require_auth(get_self());
     globaltable globals(get_self(), "global"_n.value);
     auto global_it = globals.find("global"_n.value);
@@ -177,7 +176,7 @@ void dmdfarms::deactivpool(uint16_t pool_id)
 }
 
 void dmdfarms::purge(uint16_t pool_id)
-{   /* Unregister users that are not farming (have not had any LP tokens for three consecutive turns).
+{   /* Unregister users that are not farming (have had below minimum LP tokens for three consecutive turns).
        The worker will first call issue(pool_id) followed purge(pool_id) and then move to the next pool.  
        We might actually want to call purge on every pool much less often than issue(). Once every hour should be fine. */
     require_auth("worker.efi"_n);
@@ -191,7 +190,7 @@ void dmdfarms::purge(uint16_t pool_id)
     auto pool_it = pool_stats.find(pool_id);
     check(pool_it != pool_stats.end(), "error: pool_id not found (pool_stats).");
 
-    /* Check each user and if their snapshot and before_snapshot LP Token amounts are less than the minimum, they will get de-registered. */
+    /* Check each user and if their current amount, their snapshot and their before_snapshot LP Token amounts are less than the minimum, they will get de-registered. */
     auto current_iteration = registered_accounts.begin();
     auto end_itr = registered_accounts.end();
 
@@ -199,6 +198,7 @@ void dmdfarms::purge(uint16_t pool_id)
     {
         eosio::print_f("purge(): Checking lptoken information for: [%]\n",current_iteration->owner_account);
         asset user_box_lptoken = get_asset_amount(current_iteration->owner_account, pool_it->box_asset_symbol);
+        
         if ( (user_box_lptoken.amount < pool_it->minimum_lp_tokens) && 
              (current_iteration->boxlptoken_snapshot_amount < pool_it->minimum_lp_tokens) && 
              (current_iteration->boxlptoken_before_amount < pool_it->minimum_lp_tokens) )
