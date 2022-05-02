@@ -199,7 +199,9 @@ void dmdfarms::purge(uint16_t pool_id)
     {
         eosio::print_f("purge(): Checking lptoken information for: [%]\n",current_iteration->owner_account);
         asset user_box_lptoken = get_asset_amount(current_iteration->owner_account, pool_it->box_asset_symbol);
-        if ( (user_box_lptoken.amount == 0) && (current_iteration->boxlptoken_snapshot_amount == 0) && (current_iteration->boxlptoken_before_amount == 0) )
+        if ( (user_box_lptoken.amount < pool_it->minimum_lp_tokens) && 
+             (current_iteration->boxlptoken_snapshot_amount < pool_it->minimum_lp_tokens) && 
+             (current_iteration->boxlptoken_before_amount < pool_it->minimum_lp_tokens) )
         {
             eosio::print_f("purge(): Detected dead user. Purging [%]\n",current_iteration->owner_account);
             /* Send the user his unclaimed_reward */
@@ -233,10 +235,10 @@ void dmdfarms::issue(uint16_t pool_id)
     if (now >= pool_it->halving3_deadline)  {  mining_rate_handicap = 8;  }
     if (now >= pool_it->halving4_deadline)  {  mining_rate_handicap = 16; }
 
-    uint16_t issue_precision  = 100000; // With our current algorithm: if we set ("issue_frequency" == 100): we release 0.01 tokens per second.
-                                      //    and if we set ("issue_frequency" == 1):   we release 0.0001 tokens per second.
+    uint16_t issue_precision  = 100000; // With our current algorithm: if we set ("issue_frequency" == 100): we release 0.001 tokens per second.
+                                      //    and if we set ("issue_frequency" == 1):   we release 0.00001 tokens per second.
                                 /* In order to release 2000 DMD in the first month we should release 0.00076053059 DMD per second */
-                                /* So we should add an extra zero to issue precision and set the mining_frequency to 76 */
+                                /* So we added an extra zero to issue precision (now set to 100000) and set the mining_frequency to 76 */
                                 /* We can have 5k DMD for each mining pool */
 
     /* How many coins are issued every second. Multiplied by 10000 for tokens with precision 4. Divided by "issue_precision" for extra control */
@@ -252,9 +254,7 @@ void dmdfarms::issue(uint16_t pool_id)
     if (total_dmd_released > pool_it->dmd_mine_qty_remaining)
     {   /* Overflow check */
         pool_stats.modify(pool_it, get_self(),[&]( auto& row) 
-        {  //row.dmd_mine_qty_remaining = 0;
-           //row.last_reward_time = now;  
-           row.is_active = false ;}); /* Automatically deactivate the mining pool */
+        {   row.is_active = false;   }); /* Automatically deactivate the mining pool */
         return;
     }
 
