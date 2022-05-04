@@ -52,7 +52,7 @@ void dmdfarms::init()
     }
 }
 
-void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, uint64_t min_lp_tokens, asset box_asset_symbol, string pool_name, uint64_t dmd_mine_qty_remaining)
+void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, uint64_t min_lp_tokens, asset box_asset_symbol, string pool_name, string token_contrak uint64_t dmd_mine_qty_remaining)
 {   /* We call after deploying the contract */
     require_auth(get_self());
 
@@ -84,6 +84,7 @@ void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, uint64_t 
                                                      /* Should implement automatic user unregistering */
             row.box_asset_symbol = box_asset_symbol; /* The BOX-LP Tokens used to identify the pair for the pool. */
             row.pool_name = pool_name;               /* String identifying the pool name, for display purposes only. */
+            row.token_contrak = token_contrak;       /* The Token Contract Address for the pool */
             row.pool_total_lptokens = 0;             /* This is only used to calculate the APR for the display, as our worker counts them every new cycle */
         });
 
@@ -96,6 +97,7 @@ void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, uint64_t 
             row.dmd_mine_qty_remaining = dmd_mine_qty_remaining; /* How many DMDs are left to be mined in the pool */
             row.box_asset_symbol = box_asset_symbol;
             row.pool_name = pool_name;
+            row.token_contrak = token_contrak;
         });
 }
 
@@ -198,7 +200,7 @@ void dmdfarms::purge(uint16_t pool_id)
     {
         eosio::print_f("purge(): Checking lptoken information for: [%]\n",current_iteration->owner_account);
         asset user_box_lptoken = get_asset_amount(current_iteration->owner_account, pool_it->box_asset_symbol);
-        
+
         if ( (user_box_lptoken.amount < pool_it->minimum_lp_tokens) && 
              (current_iteration->boxlptoken_snapshot_amount < pool_it->minimum_lp_tokens) && 
              (current_iteration->boxlptoken_before_amount < pool_it->minimum_lp_tokens) )
