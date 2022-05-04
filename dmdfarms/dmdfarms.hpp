@@ -71,6 +71,7 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
 
         asset box_asset_symbol;
         std::string pool_name; /* For display purposes */
+        std::string token_contrak; /* _ */
 
         uint64_t primary_key()const { return pool_id; } 
     };
