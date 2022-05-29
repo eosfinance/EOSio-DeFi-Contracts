@@ -28,6 +28,7 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
     };
     typedef eosio::multi_index< "globaltable"_n, globals  > globaltable;
  
+    /* The BOX Table */
     struct [[eosio::table]] accounts
     {
         asset    balance;
@@ -35,6 +36,25 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
         uint64_t primary_key()const { return balance.symbol.code().raw(); }
     };
     typedef eosio::multi_index< "accounts"_n, accounts > boxtable;
+
+    /* The atomicassets assets table */
+
+    /* Scope: owner_account */
+    struct [[eosio::table]] asset_s
+    {
+        uint64_t         asset_id;
+        name             collection_name;
+        name             schema_name;
+        int32_t          template_id;
+        name             ram_payer;
+        vector <asset>   backed_tokens;
+        vector <uint8_t> immutable_serialized_data;
+        vector <uint8_t> mutable_serialized_data;
+
+        uint64_t primary_key() const { return asset_id; };
+    };
+
+    typedef eosio::multi_index< "assets"_n, assets_s> assets_t;
 
 
     struct [[eosio::table]] registered_accounts
@@ -95,6 +115,27 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
             transfer_action.send();
     }
 
+    bool user_has_nft(const name& owner_account, string schema)
+    {   /* Returns true or false depending on wether or not the owner_account has an NFT from the specified schema from "nft.efi" collection */
+        string collection = "nft.efi";
+        bool has_nft = false;
+
+        assets_t assets("atomicassets"_n, owner_account.value);
+
+        auto itr = assets.begin();
+
+        while (itr != assets.end())
+        {
+            if ((itr->collection_name == collection) && (itr->schema_name == schema))
+            {
+                has_nft = true;
+                break;
+            }
+        }
+
+        return has_nft;
+    }
+
     asset get_asset_amount(name owner_account, asset lptoken)
     {   /* Retrieve Defibox LPToken balance for specific account and symbol */
         asset user_balance = lptoken; user_balance.amount = 0;
@@ -114,7 +155,7 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
     [[eosio::action]]
     void init();
     [[eosio::action]]
-    void setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, uint64_t min_lp_tokens, asset box_asset_symbol, string pool_name, uint64_t dmd_mine_qty_remaining);
+    void setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, uint64_t min_lp_tokens, asset box_asset_symbol, string pool_name, string token_contrak, uint64_t dmd_mine_qty_remaining);
     [[eosio::action]]
     void registeruser(const name& owner_account, uint16_t pool_id);
     [[eosio::action]]
