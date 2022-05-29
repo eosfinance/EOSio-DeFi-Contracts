@@ -40,7 +40,7 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
     /* The atomicassets assets table */
 
     /* Scope: owner_account */
-    struct [[eosio::table]] asset_s
+    struct [[eosio::table]] assets
     {
         uint64_t         asset_id;
         name             collection_name;
@@ -54,7 +54,7 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
         uint64_t primary_key() const { return asset_id; };
     };
 
-    typedef eosio::multi_index< "assets"_n, assets_s> assets_t;
+    typedef eosio::multi_index< "assets"_n, assets > assetable;
 
 
     struct [[eosio::table]] registered_accounts
@@ -115,12 +115,12 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
             transfer_action.send();
     }
 
-    bool user_has_nft(const name& owner_account, string schema)
+    bool user_has_nft(const name& owner_account, name schema)
     {   /* Returns true or false depending on wether or not the owner_account has an NFT from the specified schema from "nft.efi" collection */
-        string collection = "nft.efi";
+        name collection = "nft.efi"_n;
         bool has_nft = false;
 
-        assets_t assets("atomicassets"_n, owner_account.value);
+        assetable assets("atomicassets"_n, owner_account.value);
 
         auto itr = assets.begin();
 
