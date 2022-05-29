@@ -8,7 +8,7 @@ Then we have another function: activatepool(), and when that is called, the halv
 
 1. DMD Vault where users stake DMD for 3-6-9 months and get DMD rewards.
 
-2. The NFTs with +10% bonus.
+2. Test code for the NFTs with +10% bonus.
 
 DONE:
 
