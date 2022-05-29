@@ -309,16 +309,16 @@ void dmdfarms::issue(uint16_t pool_id)
 
         if ((pool_id == 0) || (pool_id == 1) || (pool_id == 2))
         {
-            string schema;
-            if (pool_id == 0) { schema = "golden.hub"; }
-            if (pool_id == 1) { schema = "golden.dop"; }
-            if (pool_id == 2) { schema = "golden.dmd"; }
+            name schema;
+            if (pool_id == 0) { schema = "golden.hub"_n; }
+            if (pool_id == 1) { schema = "golden.dop"_n; }
+            if (pool_id == 2) { schema = "golden.dmd"_n; }
 
-            if user_has_nft(owner_account, schema)
+            if (user_has_nft(current_iteration->owner_account, schema))
             {   /* It means the user has at least 1 correct NFT for HUB, DOP or DMD. Increase his unclaimed_rewards by 10% */
                 eosio::print_f("Detected valid NFT for user: [%]\n",current_iteration->owner_account);
                 eosio::print_f("Previous unclaimed: [%]\n",dmd_unclaimed_amount);
-                dmd_unclaimed_amount += dmd_unclaimed_amount*10/100 /* Should be +10% increase. Need to test. */
+                dmd_unclaimed_amount += dmd_unclaimed_amount*10/100; /* Should be +10% increase. Need to test. */
                 eosio::print_f("Unclaimed after bonus: [%]\n",dmd_unclaimed_amount);
             }
         }
