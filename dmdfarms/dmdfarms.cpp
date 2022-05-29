@@ -52,7 +52,7 @@ void dmdfarms::init()
     }
 }
 
-void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, uint64_t min_lp_tokens, asset box_asset_symbol, string pool_name, string token_contrak uint64_t dmd_mine_qty_remaining)
+void dmdfarms::setpool(uint16_t pool_id, uint32_t dmd_issue_frequency, uint64_t min_lp_tokens, asset box_asset_symbol, string pool_name, string token_contrak, uint64_t dmd_mine_qty_remaining)
 {   /* We call after deploying the contract */
     require_auth(get_self());
 
@@ -305,7 +305,28 @@ void dmdfarms::issue(uint16_t pool_id)
         if (actual_box_lp_calculation_amount > 0)
         {   float dmd_percentage = float(actual_box_lp_calculation_amount)/float(pool_total_lptokens) * 100; 
             dmd_unclaimed_amount = (dmd_percentage*total_dmd_released)/0.01/10000;  } /* (divided by 10000) for coins with precision 4 */
-            /* Here we should see if they have NFTs or not. If they do, we can increase the unclaimed_amount by 5-10% */
+        /* Here we should see if they have NFTs or not. If they do, we can increase the unclaimed_amount by 5-10% */
+
+        if ((pool_id == 0) || (pool_id == 1) || (pool_id == 2))
+        {
+            string schema;
+            if (pool_id == 0) { schema = "golden.hub"; }
+            if (pool_id == 1) { schema = "golden.dop"; }
+            if (pool_id == 2) { schema = "golden.dmd"; }
+
+            if user_has_nft(owner_account, schema)
+            {   /* It means the user has at least 1 correct NFT for HUB, DOP or DMD. Increase his unclaimed_rewards by 10% */
+                eosio::print_f("Detected valid NFT for user: [%]\n",current_iteration->owner_account);
+                eosio::print_f("Previous unclaimed: [%]\n",dmd_unclaimed_amount);
+                dmd_unclaimed_amount += dmd_unclaimed_amount*10/100 /* Should be +10% increase. Need to test. */
+                eosio::print_f("Unclaimed after bonus: [%]\n",dmd_unclaimed_amount);
+            }
+        }
+
+        /* For HUB/DOP/DMD pools (so 0, 1, 2 respectively, we will scan for collection "nft.efi" and the NFT schema, "golden.hub", "golden.dop" or "golden.dmd", respectively.) */
+
+        /* We need to check "atomicassets" contract, "assets" table, and the scope is the owner_account */
+        /* We need to make a special function that returns either true or false if the owner has an NFT from golden.hub or golden.dop or golden.dmd on him, in the current issue() */
 
         /* Modify the table and have before = snapshot and snapshot = current_snapshot */
         /* Add the user's unclaimed rewards if necessary */
