@@ -1,6 +1,19 @@
 #include <dmdao.hpp>
 
-/* The DMD Dao Smart Contrak */
+/* The DMD Dao Smart Contract */
+
+/* This will be used to vote on the final inflation figures before we null the keys to DMD */
+/* On notify, on receive DMD, activate voting function */
+/* User sends a minimum of 1 DMD to vote for any of the 5 proposals */
+/* A user can vote as many times as he wants, for as many proposals as he wants */
+/* Send min. 1 DMD to the dao vote contract, with memo "1" to "5" and the vote will be registered in the according proposal */
+/* We will also have a total_votes counter, and we will have a proposal_1_total, to proposal_5_total votes */
+
+/* We will also have another table, with each user, and their amount of DMD that they used to vote, doesn't matter which DMD has voted for which pool, just the total */
+
+/* The percentage is simply proposal_votes *100 / total_votes */
+
+/* We will have an end_vote function which will refund everyone their DMD and set the final percentage numbers for each of the five proposals */
 
 void dmdao::set()
 {
@@ -46,12 +59,12 @@ void dmdao::vote(const name& owner_account, const name& to, const asset& vote_qu
     }
 
     /* Check for valid memo */
-    bool validmemo;
+    bool validmemo = false;
     if ((memo == "1") || (memo == "2") || (memo == "3") || (memo == "4") || (memo == "5"))
     {
         validmemo = true;
     }
-    check(validmemo, "error: memo must be between 1 and 5.");
+    check(validmemo  == true, "error: memo must be between 1 and 5.");
 
     check(vote_quantity_dmd.amount >= 10000, "error: 1 DMD is the minimum required amount to cast a vote.");
     check(vote_quantity_dmd.symbol == dmd_symbol, "error: these are not the droids you are looking for.");
