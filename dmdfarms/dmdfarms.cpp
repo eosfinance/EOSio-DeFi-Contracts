@@ -8,11 +8,12 @@ Then we have another function: activatepool(), and when that is called, the halv
 
 1. DMD Vault where users stake DMD for 3-6-9 months and get DMD rewards.
 
-2. Test code for the NFTs with +10% bonus.
 
 DONE:
 
 3. Yield Farms. 
+
+2. The NFTs with +10% bonus.
 
 */
 void dmdfarms::init()
@@ -409,7 +410,7 @@ void dmdfarms::claimrewards(const name& owner_account, uint16_t pool_id)
     {
         asset dmd_reward_amount;
         dmd_reward_amount.symbol = dmd_symbol;
-        dmd_reward_amount.amount = lprewards_it->dmd_unclaimed_amount/10000; /* We must divide by 10k for coins with precision 4 */
+        dmd_reward_amount.amount = lprewards_it->dmd_unclaimed_amount;
 
         registered_accounts.modify(lprewards_it, owner_account, [&](auto& row)
         {
