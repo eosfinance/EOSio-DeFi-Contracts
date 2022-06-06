@@ -15,8 +15,6 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
     const symbol hub_box_lp_symbol;
     const symbol dmd_box_lp_symbol;
 
-    const symbol dop_symbol;
-    const symbol hub_symbol;
     const symbol dmd_symbol;
 
     struct [[eosio::table]] globals 
@@ -131,6 +129,7 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
                 has_nft = true;
                 break;
             }
+            ++itr;
         }
 
         return has_nft;
