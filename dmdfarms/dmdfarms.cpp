@@ -306,8 +306,8 @@ void dmdfarms::issue(uint16_t pool_id)
         if (actual_box_lp_calculation_amount > 0)
         {   float dmd_percentage = float(actual_box_lp_calculation_amount)/float(pool_total_lptokens) * 100; 
             dmd_unclaimed_amount = (dmd_percentage*total_dmd_released)/0.01/10000;  } /* (divided by 10000) for coins with precision 4 */
-        /* Here we should see if they have NFTs or not. If they do, we can increase the unclaimed_amount by 5-10% */
 
+        /* Here we should see if they have NFTs or not. If they do, we can increase the unclaimed_amount by 10% */
         if ((pool_id == 0) || (pool_id == 1) || (pool_id == 2))
         {
             name schema;
@@ -323,7 +323,6 @@ void dmdfarms::issue(uint16_t pool_id)
                 eosio::print_f("Unclaimed after bonus: [%]\n",dmd_unclaimed_amount);
             }
         }
-
         /* For HUB/DOP/DMD pools (so 0, 1, 2 respectively, we will scan for collection "nft.efi" and the NFT schema, "golden.hub", "golden.dop" or "golden.dmd", respectively.) */
 
         /* We need to check "atomicassets" contract, "assets" table, and the scope is the owner_account */
@@ -429,7 +428,7 @@ void dmdfarms::dellastpool()
     auto global_it = globals.find("global"_n.value);
     check(global_it != globals.end(),"error: must init global first.");
     check(global_it->last_pool_id != 0,"error: no pool to delete.");
-
+/* Must use delpool for pool 0. Can use this function for every other pool until it reaches 0 */
     pooltable pool_stats(get_self(), global_it->last_pool_id);
     auto itr = pool_stats.find(global_it->last_pool_id);
     pool_stats.erase(itr);
