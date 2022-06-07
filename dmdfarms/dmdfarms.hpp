@@ -36,7 +36,6 @@ class [[eosio::contract("dmdfarms")]] dmdfarms:public eosio::contract
     typedef eosio::multi_index< "accounts"_n, accounts > boxtable;
 
     /* The atomicassets assets table */
-
     /* Scope: owner_account */
     struct [[eosio::table]] assets
     {
