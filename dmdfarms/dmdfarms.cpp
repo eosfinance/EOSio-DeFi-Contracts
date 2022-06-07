@@ -4,16 +4,7 @@
 The Demond Yeld Farms.
 
 Setpool sets the pools with "is_active = 0". 
-Then we have another function: activatepool(), and when that is called, the halvings and mining start time can also be set.
-
-1. DMD Vault where users stake DMD for 3-6-9 months and get DMD rewards.
-
-
-DONE:
-
-3. Yield Farms. 
-
-2. The NFTs with +10% bonus.
+Then we have another function: activatepool(), and when that is called, the halvings and mining start time are also set.
 
 */
 void dmdfarms::init()
@@ -146,8 +137,8 @@ void dmdfarms::activatepool(uint16_t pool_id, bool init_mining_timestamps)
     check(pool_it->is_active == false, "error: pool has already been activated.");
 
     uint32_t now = current_time_point().sec_since_epoch();
-    uint32_t seconds_in_a_month = 2629743;
-    uint32_t months_between_halvings = 1;
+    uint32_t seconds_in_a_week = 604800;
+    uint32_t weeks_between_halvings = 2;
 
     pool_stats.modify(pool_it, get_self(),[&]( auto& row) 
     {
@@ -156,10 +147,10 @@ void dmdfarms::activatepool(uint16_t pool_id, bool init_mining_timestamps)
         if (init_mining_timestamps)
         {   /* Extra option that can reset our mining timestamps */
             row.mining_start_time = now;
-            row.halving1_deadline = now+(1*seconds_in_a_month * months_between_halvings);
-            row.halving2_deadline = now+(2*seconds_in_a_month * months_between_halvings);
-            row.halving3_deadline = now+(3*seconds_in_a_month * months_between_halvings);
-            row.halving4_deadline = now+(4*seconds_in_a_month * months_between_halvings);
+            row.halving1_deadline = now+(1*seconds_in_a_week * weeks_between_halvings);
+            row.halving2_deadline = now+(2*seconds_in_a_week * weeks_between_halvings);
+            row.halving3_deadline = now+(3*seconds_in_a_week * weeks_between_halvings);
+            row.halving4_deadline = now+(4*seconds_in_a_week * weeks_between_halvings);
             row.last_reward_time = now;
         }
     });
@@ -238,14 +229,10 @@ void dmdfarms::issue(uint16_t pool_id)
     if (now >= pool_it->halving3_deadline)  {  mining_rate_handicap = 8;  }
     if (now >= pool_it->halving4_deadline)  {  mining_rate_handicap = 16; }
 
-    uint16_t issue_precision  = 100000; // With our current algorithm: if we set ("issue_frequency" == 100): we release 0.001 tokens per second.
-                                      //    and if we set ("issue_frequency" == 1):   we release 0.00001 tokens per second.
-                                /* In order to release 2000 DMD in the first month we should release 0.00076053059 DMD per second */
-                                /* So we added an extra zero to issue precision (now set to 100000) and set the mining_frequency to 76 */
-                                /* We can have 5k DMD for each mining pool */
+    uint16_t issue_precision = 10;
 
-    /* How many coins are issued every second. Multiplied by 10000 for tokens with precision 4. Divided by "issue_precision" for extra control */
-    uint32_t augmented_dmd_issue_frequency = pool_it->dmd_issue_frequency*10000 / issue_precision / mining_rate_handicap;
+    /* How many coins are issued every second. */
+    uint64_t augmented_dmd_issue_frequency = pool_it->dmd_issue_frequency/ issue_precision / mining_rate_handicap;
 
     /* How many seconds have passed until now and last_reward_time */
     uint32_t seconds_passed = now - pool_it->last_reward_time; 
