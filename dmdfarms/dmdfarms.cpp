@@ -35,7 +35,7 @@ void dmdfarms::init()
             }
             if (i == 0) 
                 i = 1; /* Overflow check */
-            eosio::print_f("Finished counting the pools: i = [%]\n",i);
+            //eosio::print_f("Finished counting the pools: i = [%]\n",i);
 
             globals.modify(global_it, get_self(),[&]( auto& row) 
                 {   row.last_pool_id = i-1   ;});
@@ -115,16 +115,26 @@ void dmdfarms::setminlptoke(uint16_t pool_id, uint64_t min_lp_tokens)
     {   row.minimum_lp_tokens = min_lp_tokens; });
 }
 
-void dmdfarms::setlastrewrd(uint16_t pool_id)
+/* If timestamp == 0, sets last reward time to now */
+/* Should only use for bugfix purposes */
+void dmdfarms::setlastrewrd(uint16_t pool_id, uint32_t timestamp)
 {   require_auth(get_self());
 
     pooltable pool_stats(get_self(), pool_id);
     auto pool_it = pool_stats.find(pool_id);
     check(pool_it != pool_stats.end(), "error: pool_id not found.");
 
-    uint32_t now = current_time_point().sec_since_epoch();
-    pool_stats.modify(pool_it, get_self(),[&]( auto& row) 
-    {   row.last_reward_time = now; });
+    if (timestamp == 0)
+    {
+        uint32_t now = current_time_point().sec_since_epoch();
+        pool_stats.modify(pool_it, get_self(),[&]( auto& row) 
+        {   row.last_reward_time = now; });
+    }
+    else
+    {
+        pool_stats.modify(pool_it, get_self(),[&]( auto& row) 
+        {   row.last_reward_time = timestamp; });
+    }
 }
 
 void dmdfarms::activatepool(uint16_t pool_id, bool init_mining_timestamps)
@@ -190,14 +200,14 @@ void dmdfarms::purge(uint16_t pool_id)
 
     while (current_iteration != end_itr)
     {
-        eosio::print_f("purge(): Checking lptoken information for: [%]\n",current_iteration->owner_account);
+        //eosio::print_f("purge(): Checking lptoken information for: [%]\n",current_iteration->owner_account);
         asset user_box_lptoken = get_asset_amount(current_iteration->owner_account, pool_it->box_asset_symbol);
 
         if ( (user_box_lptoken.amount < pool_it->minimum_lp_tokens) && 
              (current_iteration->boxlptoken_snapshot_amount < pool_it->minimum_lp_tokens) && 
              (current_iteration->boxlptoken_before_amount < pool_it->minimum_lp_tokens) )
         {
-            eosio::print_f("purge(): Detected dead user. Purging [%]\n",current_iteration->owner_account);
+            //eosio::print_f("purge(): Detected dead user. Purging [%]\n",current_iteration->owner_account);
             /* Send the user his unclaimed_reward */
             asset dmd_reward_amount;
             dmd_reward_amount.symbol = dmd_symbol;
@@ -229,17 +239,21 @@ void dmdfarms::issue(uint16_t pool_id)
     if (now >= pool_it->halving3_deadline)  {  mining_rate_handicap = 8;  }
     if (now >= pool_it->halving4_deadline)  {  mining_rate_handicap = 16; }
 
-    uint16_t issue_precision = 10;
+    uint16_t issue_precision = 10; /* Just another division to make our pool_it->dmd_issue_frequency more precise and configurable */
+    uint16_t actual_halving_handicap = issue_precision * mining_rate_handicap;
+
+    uint32_t float_rounds = 10000; /* Need to multiply by this and then divide to avoid rounding errors to zero */
 
     /* How many coins are issued every second. */
-    uint64_t augmented_dmd_issue_frequency = pool_it->dmd_issue_frequency/ issue_precision / mining_rate_handicap;
+    uint64_t augmented_dmd_issue_frequency = pool_it->dmd_issue_frequency * float_rounds / actual_halving_handicap;
+    eosio::print_f("augmented_dmd_issue_frequency: [%] \n",augmented_dmd_issue_frequency);
 
     /* How many seconds have passed until now and last_reward_time */
     uint32_t seconds_passed = now - pool_it->last_reward_time; 
     eosio::print_f("Seconds passed since last issue(): [%] \n",seconds_passed);
 
     /* Determine how much total DMD reward should be issued in this transaction/cycle/block */
-    uint64_t total_dmd_released = seconds_passed * augmented_dmd_issue_frequency;
+    uint64_t total_dmd_released = seconds_passed * augmented_dmd_issue_frequency / float_rounds; /* Now we divide everything by float_rounds and get the proper number */
     /* Check if there's enough DMD left in the pool */
     if (total_dmd_released > pool_it->dmd_mine_qty_remaining)
     {   /* Overflow check */
@@ -306,7 +320,7 @@ void dmdfarms::issue(uint16_t pool_id)
             {   /* It means the user has at least 1 correct NFT for HUB, DOP or DMD. Increase his unclaimed_rewards by 10% */
                 eosio::print_f("Detected valid NFT for user: [%]\n",current_iteration->owner_account);
                 eosio::print_f("Previous unclaimed: [%]\n",dmd_unclaimed_amount);
-                dmd_unclaimed_amount += dmd_unclaimed_amount*10/100; /* Should be +10% increase. Need to test. */
+                dmd_unclaimed_amount += dmd_unclaimed_amount*10/100; /* +10% Increase */
                 eosio::print_f("Unclaimed after bonus: [%]\n",dmd_unclaimed_amount);
             }
         }
@@ -360,8 +374,8 @@ void dmdfarms::registeruser(const name& owner_account, uint16_t pool_id)
 
     /* Check if user has the minimum amount of lptokens needed */
     asset pool_lptokens = get_asset_amount(owner_account, pool_it->box_asset_symbol);
-    eosio::print_f("Checking LP Token quantity: [%] for [%]\n",pool_it->box_asset_symbol, owner_account);
-    eosio::print_f("User has [%] pool_lptokens\n",pool_lptokens);
+    //eosio::print_f("Checking LP Token quantity: [%] for [%]\n",pool_it->box_asset_symbol, owner_account);
+    //eosio::print_f("User has [%] pool_lptokens\n",pool_lptokens);
     check(pool_lptokens.amount >= pool_it->minimum_lp_tokens, "User does not meet the minumum LP size requirement for the specific pool. Please add more liquidity.");
     /* Add the user in the table at this point */
     registered_accounts.emplace(owner_account, [&](auto& row)
@@ -404,7 +418,7 @@ void dmdfarms::claimrewards(const name& owner_account, uint16_t pool_id)
             row.dmd_unclaimed_amount = 0;
         });
         /* Send rewards */
-        dmdfarms::inline_transferdmd(get_self(), owner_account, dmd_reward_amount, "I'm LP mining DMD in the Yield Farms !");
+        dmdfarms::inline_transferdmd(get_self(), owner_account, dmd_reward_amount, "I'm Mining Diamonds! Farm now at https://Diamond.gl");
     }
 }
 
