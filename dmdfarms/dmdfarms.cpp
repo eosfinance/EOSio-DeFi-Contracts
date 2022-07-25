@@ -124,14 +124,16 @@ void dmdfarms::setlastrewrd(uint16_t pool_id, uint32_t timestamp)
     auto pool_it = pool_stats.find(pool_id);
     check(pool_it != pool_stats.end(), "error: pool_id not found.");
 
+    uint32_t now = current_time_point().sec_since_epoch();
+
     if (timestamp == 0)
     {
-        uint32_t now = current_time_point().sec_since_epoch();
         pool_stats.modify(pool_it, get_self(),[&]( auto& row) 
         {   row.last_reward_time = now; });
     }
     else
     {
+        check(now >= timestamp, "Can't set a date from the future!");
         pool_stats.modify(pool_it, get_self(),[&]( auto& row) 
         {   row.last_reward_time = timestamp; });
     }
@@ -242,7 +244,7 @@ void dmdfarms::issue(uint16_t pool_id)
     uint16_t issue_precision = 10; /* Just another division to make our pool_it->dmd_issue_frequency more precise and configurable */
     uint16_t actual_halving_handicap = issue_precision * mining_rate_handicap;
 
-    uint32_t float_rounds = 10000; /* Need to multiply by this and then divide to avoid rounding errors to zero */
+    uint32_t float_rounds = 10000; /* Need to multiply by 10k this and then divide by 10k to avoid rounding errors to zero */
 
     /* How many coins are issued every second. */
     uint64_t augmented_dmd_issue_frequency = pool_it->dmd_issue_frequency * float_rounds / actual_halving_handicap;
